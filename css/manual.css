@@ -1,0 +1,34 @@
+body{ background-color: #223344}
+#test {position: relative; margin: 0em; padding: 1em 0em 0 0;  text-align: left;
+       width: 76.5em; margin-left: auto; margin-right: auto}
+#test #Blurb h5{margin: 0.5em 0 0.5em 0}
+#test #left {width: 16em}
+#test #right{width: 60em;margin-left: 16.5em; padding: 0}
+#test .Apoco_slideshow {width: 640px; min-height: 440px; padding-bottom: 10%}
+.Apoco_slideshow div.pic_area {height: 100%; min-height: 440px}
+.Apoco_slideshow div.pic_area img{}
+.Apoco_slideshow div.pic_area div{bottom: -4em}
+
+#Head{background: url("images/apoco01.png") no-repeat; width: 300px; height: 140px}
+#Blurb{padding: 2em 3em 2em 3em }
+#Tabs{position: absolute; top: 160px}
+.tab_container{margin: 0; padding: 0}
+#test #main{top: 0em;position: inherit}   
+
+#test .bannertop{position: relative; height: inherit; }
+#Content{margin-top: 3.5em; min-height: 40em;}
+/* #Blurb{font-size: 10pt} */
+.footer_text{color: #888; font-size: 8pt; font-weight: lighter;
+             margin-left:auto; margin-right:auto; width: 40em}
+#Footer{border-top: 1px solid #888;position: relative}
+
+.field_container textarea {font-family: monospace}
+#Main .field_container{padding: 2em 3em}
+
+#test #menuDisplay{width: 10em}
+
+#left{ width: 16em; position: absolute }
+#left > div{padding:1em}
+#right{ margin-left: 16.25em; padding: 0; display: table} /*width: auto; top: 30em; position: absolute;   } */
+/* ul.apoco_menu_list li{font-size: 10pt} */
+div.ui-dialog-titlebar span.ui-dialog-title{ color: #222222 }

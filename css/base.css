@@ -1,0 +1,387 @@
+/* Copyright (c) Pooka Ltd 2012-16
+
+Author: Val Wardlaw
+Type: css stylesheet
+History: 1st Feb 2012 creation
+
+*/
+html{width: 100%; height: 100%}
+
+body{ body: 100%; height: 100%; margin: 0; padding: 0;  font-family: Arial,sans-serif; font-size: 14px;}  /*font: 15px/22.5px "Helvetica Neue",HelveticaNeue,Helvetica,Arial,sans-serif } */
+* {
+    box-sizing: border-box;
+}
+#wrapper{font-size: 10pt}
+.hide{ display: none }
+
+.bannertop {width: 100%; height: 3em; position: fixed; top: 0}
+
+#Tail{position: fixed; bottom: 0; z-index: 100 }
+#Main { /*margin-left: 4em; margin-right: 4em;  */ height: auto}
+
+/* code{font-size: 10pt}  */
+
+.tab_container{background-color: #ddeeff}
+
+.draggable{ opacity:0.5}
+.isdraggable{position: fixed; z-index: 100}
+.resizable{resize:both;overflow:auto}
+/* selectable */
+
+
+.selectable .ui-selecting{ background: #444 }
+.selectable .ui-selected{ background: #555  }
+
+
+/* fieldSet */
+.field_container{padding: 1em}
+.field_container div.label{ margin-right: 1em; display: inline-flex; width:10em}
+.field_container div.label label{margin-right: 1em; width: 3em}
+
+.fieldset {margin: 0.5em 0}
+
+
+.Apoco_paginate{}
+.Apoco_paginate button{}
+.slideshow_cover{position: fixed;
+                 z-index: 9;
+                 left: 0;
+                 top: 0;
+                 width: 100%;
+                 height: 100%; 
+                 background-color: #000 } 
+/* slideshow */
+
+.Apoco_slideshow div.pic_area{position: relative;height: 100% } 
+.Apoco_slideshow div.pic_area_full{position:absolute; top: 0; left:0; z-index: 10}
+.Apoco_slideshow ul.carousel{padding: 0; margin: 0;position:relative;}
+.Apoco_slideshow ul.carousel li{position: absolute; top: 0; left:0; visibility:"hidden"}
+.Apoco_slideshow ul.carousel li{position: absolute: top: 0; left: 0}
+.Apoco_slideshow ul.carousel li div{display: table-row;width: 100%; display: block;position:absolute;}
+.Apoco_slideshow ul.carousel li div p{text-align: center; width: inherit; margin: auto; min-width: 400px; max-width: 800px; position: relative}
+.Apoco_slideshow ul.carousel li.slide > h1{width:inherit; height: inherit; text-align:center;}
+.Apoco_slideshow span.carousel_left {position: absolute; z-index: 10; background: url("images/carousel_left.png") no-repeat #aaa; width: 48px; height: 48px; margin-left: 1em; top: 50%;left:0px; opacity:0 }
+.Apoco_slideshow span.carousel_right{position: absolute; z-index: 10; background: url("images/carousel_right.png") no-repeat #aaa; width: 48px; height: 48px;margin-right: 1em; top: 50%; right: 0px; opacity:0}
+.Apoco_slideshow span.carousel_left:hover{opacity: 1}
+.Apoco_slideshow span.carousel_right:hover{opacity: 1}
+.Apoco_slideshow span.hover{background-color:#555; opacity: 0.5 }
+.Apoco_slideshow div.slideshow_controls{position: relative; width: 140px; margin: 0 auto;z-index:11;display: block }
+.Apoco_slideshow div.slideshow_controls ul{display:table-cell; list-style-type: none; padding:0}
+.Apoco_slideshow div.slideshow_controls li{width: 24px;
+                                            cursor: pointer;
+                                            float: left;
+                                            list-style: outside none none;
+                                            margin: 2px;
+                                            padding: 4px 0;
+                                            position: relative;}
+.Apoco_slideshow div.slideshow_controls span{float:left; margin: 0 4px}
+
+
+/* tabs */
+.tab_container{width: 100%; margin-right: 2em;}
+.tab_container li{ height: 2em ; cursor: pointer }
+.tab_container li span{ height: 2em; padding: 0em 1em; text-align: center; vertical-align: middle }
+/*.tab_container li:hover{
+    
+} */
+
+
+/* menus */
+.menu {padding-top: 1em;}
+.menu span{font-weight: bolder; padding-left: 0.5em }
+.menu ul{margin: 1em 0 0 0; font-size:90%}
+.menu ul li:not(.seperator):hover{font-weight: bolder }
+.menu ul li.seperator{border-bottom: inherit; padding: 1em 0em}
+.menu ul li span.seperator{}
+
+.popup { position: absolute; width: 40em; height: 14em; z-index: 1000; background: #101010 }
+
+#grid_popup{ }
+#grid_popup textarea{  width: 40em; height: 10em; }
+/* default for tables */
+
+/* grid table */
+.grid {min-width: 4em; overflow:hidden; font-size: 10pt; box-sizing: border-box} 
+.grid .label{margin: 1em 0 1em 1em;   display: table-row}
+.grid_content { min-width: 8em; min-height: 6em}
+.grid_footer {height: 3em; margin-top: 2em; } /* position: absolute;  bottom: 12em; */
+.grid_footer div{ background-color: #888}
+.grid button{ height: 2em}  
+.grid table{ min-width: 8em }
+
+.grid table {table-layout: fixed; border-collapse: collapse}
+/*.grid table.head {z-index: 100; position: fixed;  top: 3em;  height: 2em }
+.grid table.head th{ color: #fff; background-color: #000; background-image:none; border: 1px solid #555} */
+.grid div.head{z-index: 100; background-color:#000;  top: 3em;  height: 2em;  overflow: hidden}
+.grid div.head div{display: inline-table; color: #fff; height: inherit; text-align: center; background-color: #000; border: 1px solid #555; box-sizing: border-box; border-collapse: collapse; overflow:hidden;}
+.grid table td {  height: 1.5em;
+                  margin: 0;
+                  box-sizing: border-box;
+                  font-weight:normal;
+                  text-align: right; 
+                  min-width: 3em !important;
+                  padding: 0em 0.4em 0em 0.4em; 
+                  border: 1px solid #bbb} /* border-bottom-width: 0em !important; padding: 0em 10em} */
+.grid table th span{ display: inline-block; float: right; margin-left: 1em; }
+.grid .hover { background: #aabbcc }
+.grid table tbody tr.last-child th,
+.grid table tbody tr.last-child td { border-bottom-width: 1px !important; }
+.grid table label{ }
+
+/* .grid table button {background-color: #202020; color: #bbbbbb; border: 1px solid dimgrey;}  */
+.grid table tr td textarea{}
+.grid table textarea,select{}
+.grid table td span{ display: inline} /*float: right } */
+/* table with only col names */
+.grid .inner_table h4{ padding-left: 1em; height: 1.5em; color: #0000ff}
+.grid .inner_table table{ height: 100% }
+.grid .inner_table table td.cell_updated{background: #fbec88}
+.grid .inner_table table td.cell_updated_fast{background: #fb8866}
+.grid table td input {box-sizing: border-box; font-size: inherit; overflow: hidden}
+.grid .inner_table table td input{ background: inherit; text-align: inherit; margin: 0;padding:0}
+.grid .inner_table table td th { word-wrap: break-word}
+/* set the row colours */
+.grid .inner_table table tr:nth-child(even){ background: #ffffd3} /* ddeeff */
+
+
+/* padding: top right bottom left */
+input:invalid {
+  border: 1px solid red;
+}
+
+input:valid {
+  border: 1px solid green;
+}
+
+input.pending{
+    animation: flash 1s infinite;
+}
+
+@keyframes flash{
+    100% { background-color : #cc3325; color: #eee}
+    0% { background-color : inherit; color: inherit}
+}
+
+.first{width: 2em }
+.slider{width: 15em; margin:  0.5em 0 0.5em 0} 
+.integer {width: 5em }
+.integer input{width: 4.5em}
+.positiveInteger {width: 5em}
+.positiveInteger input{width: 4.5em}
+.negativeInteger {width: 5em}
+.negativeInteger input {width: 4.5em}
+.date {width: 8em;}
+.date input {width: 7.5em;}
+.time {width: 8em;}
+.time input {width: 7.5em;}
+.string {width: 6em }
+.password{width: 7em}
+.password input{width: 6.5em}
+.string input{width: 5.5em}
+.token {width: 6em }
+.token input{width: 5.5em }
+.alphaNum {width: 6em }
+.alphaNum input{width: 5.5em }
+.image {width: 10em }
+.currency {width: 8em}
+.currency input{width: 7.5em}
+.email {width: 8em }
+.email input{width: 7.5em }
+.float {width: 8em}
+.container {width: 10em}
+
+.integerArray input{width: 4.5em}
+.integerArray span.integerArray{width: 3.5em}
+.floatArray {width: 12em}
+.boolean {width: 4em;}
+.text { width: 12em}
+.imageArray{display:block;margin-top:1em; margin-bottom: 1em}
+.thumbnails{margin-top: 1em}
+.thumbnails div{display:inline}
+.thumbnails img{width: inherit; height:inherit; border: 2px solid #999}
+
+.check_box{width: 16px; height: 16px}
+.field_container textarea {font-family: monospace; width: 50em; height: 10em}
+
+.stringArray li.plus{float: right; margin-left: .4em; border: 1px solid #000 }
+.stringArray li.minus{float: right; margin-left: .4em; border: 1px solid #000 }
+/* remove the spinners on number inputs */
+/*input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+*/
+
+div.apoco_autocomplete ul{z-index:10; padding: 0; margin: 0.2em}
+div.apoco_autocomplete ul li{display: block; z-index:10; width: inherit}
+div.apoco_autocomplete input{margin-bottom: 0.2em}
+
+ul.choice {list-style-type: none  }
+/* floats not using the input default */
+/* .form_style_div ul.aligned_float, */
+.float ul.aligned_float{display: flex; 
+                        list-style-type: none;
+                      /*  height:32px; */
+                        border: 1px solid #333333;
+                        box-sizing: border-box;
+                        border-collapse: collapse;
+                        width: 8em; height: 100%; 
+                        margin: 0em; padding: 0em; flex-flow: row}
+/* .form_style_div ul.aligned_float, */
+.float ul.aligned_float li{ display: flex; flex-flow: row}
+/* .grid table td.float div{display: inline  } */
+/* .form_style_div ul.aligned_float, */
+.float ul.aligned_float li input{ border: 0 none}
+
+.float ul.aligned_float li div.values .float_right,
+td span.float_right{ float: right; text-align:left; width: 50%}
+.float ul.aligned_float li div.values .float_left,
+td span.float_left{ float: left; text-align:right; width: 50% }
+
+.float ul.aligned_float div.arrows{display:flex;
+                                   flex-flow: column;
+                                   background-color: #ffffff;
+                                   height: inherit}
+float ul.aligned_float div.arrows span{height: 50%} 
+
+.float ul.aligned_float div.values{ display:flex; 
+                                   flex-flow: row; } 
+
+textarea{width: 40em; margin: 0.5em 0 0.5em 0}
+ul{list-style-type: none;}
+h1 {margin-top: 3em; font-size: 24pt; color: #bbb; text-align: left} 
+
+h2 { font-size: 18pt;  color: #444444 ,text-align: left; margin-top: 0em; margin-bottom: 0em; height: 2em}
+
+h2 a {  color: #333333; text-decoration: none}
+h2 a:hover { color: #444444; text-decoration: none}
+
+h3 { font-size: 16pt ; font-weight: bold; color: #666666; text-align: left; text-decoration: none}
+
+a {padding-right: 2em}
+
+h4 {margin: 0em;  color: #404040; text-decoration: none; font-size: 14pt;
+text-align: left;  padding: 0em 0em .5em 0em}
+
+h5{color: #202020; font-size: 12pt}
+
+.disabled{ /*display: none;
+           position: absolute;
+           cursor: auto;
+           background-color: gray;  */
+           opacity: 0.4;
+ }  /* use <div class='disabled'></div> $(.disabled).show() or .hide()  */
+
+#Apoco_modal {
+    position: fixed; /* Stay in place */
+    z-index: 900; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    line-height: normal;
+    background-color: rgb(0,0,0);
+    background-color: rgba(255,255,255,0.25);
+   
+}
+
+p {margin-left: 0em; text-align: justify; margin-top: 0em; margin-right: 2em}
+p a{text-decoration: none; outline: none}
+p a:hover{outline: none; text-decoration: none}
+dl{text-align:justify}
+code{font-size: 10pt}
+
+.Apoco_dialog{position: fixed; top: 50%; left: 50%; z-index: 1000; width: 20em; height: 12em}
+.Apoco_dialog div.ui-dialog-titlebar{height: 2em}
+#Apoco_datepicker{
+    display: block;
+    left: 36px;
+    position: absolute;
+    top: 32px;
+    z-index: 20;
+}
+#Apoco_datepicker td.Apoco_date{
+    cursor: pointer
+}
+#Apoco_datepicker_title{
+    color: #222;
+}
+#Apoco_datepicker td{
+    text-align:center;
+}
+#Apoco_datepicker_controls td.arrows{
+    display: block;
+    height: 32px ; /* in pixels because icons are 2 X 16px plus margin */
+    width: 16px;
+    margin-left: 0.2em;
+    margin-right: 0.2em;
+}
+#Apoco_datepicker_controls td.arrows span{
+    padding: 0;
+}
+#Apoco_datepicker_grid td.Apoco_date:hover{
+    border: 1px solid #aaa; 
+}
+
+
+#Apoco_alert{ width: 20em; height: 12em;margin: auto; z-index: 100; position: absolute; top: 50%;left: 50%}
+#Apoco_trouble{position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0.5;  background-color: #800; padding: 30px; z-index: 100}
+#Apoco_trouble h1{font-size: 70pt; position: fixed; top: 20%; left: 30%;  margin: auto; color: #fff ; background-color: inherit; opacity:1.0}
+#Apoco_trouble h2{position:fixed;font-size: 50pt; color: #fff; top: 33%; left:30%; margin:auto; opacity: 1.0}
+
+#Apoco_spinner
+{ position: fixed;
+  top: 50%;
+  left: 50%;
+  margin: auto;
+  z-index: 400;
+  background: transparent url('images/ajax-loader.gif');
+  width: 32px;
+  height: 32px;
+}
+
+.Apoco_clock{border: 1px solid ;border-color: inherit; padding: 0.5em; width: 5em; margin-top:1em}
+
+#login_name { margin-right: 1em} 
+
+
+.doing_things{cursor: wait}
+
+.inline{ display: inline;}
+
+
+.hidden{ visibility: hidden}
+
+.tooltip{ } 
+
+.bold{font-weight: bold; color: #cccccc}
+.red{background: #aa0000 }
+.yellow{background: #fbec88}
+.orange{background: #fb8866}
+.smallgap {position: relative; margin-top: 2em;}
+.mediumgap {position: relative; margin-top: 4em;}
+.biggap {position: relative; margin-top: 6em;}
+.hugegap{position: relative; margin-top: 12em;}
+
+.required{border: 1px solid #dd2222}
+
+
+
+#Footer {
+    width: 100%;
+    padding-top: 4em;
+    margin-top: 2em;
+    height: 4em; position: absolute; bottom: 0em; left: 0em}
+
+.footer_text{position: relative; margin: 0em; padding: 0em;margin-right: 2em;text-align: right;}  
+
+/* tree */
+#tree_control_panel{ position: absolute; top: 20em; left: 12em; width: 26em; height: 14em; z-index: 2000; background: #101010; border: 1px solid #777 }
+#tree_control_panel button{ width: 8em; height: 3em; overflow: hidden; background-color: #888; margin-bottom: 1em }
+#tree_control_panel div{ padding: 1em; border: 1px solid #777 }
+#tree_control_panel h3{ color: #777; padding-left: 1em; cursor: move }
+
