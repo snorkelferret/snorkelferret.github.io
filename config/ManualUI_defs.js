@@ -1,11 +1,13 @@
 // WARNING this script contains evil eval !!!!!!
 
-;(function(){
+var UI={};
 
+;(function(){
+    "use strict";
     //UI.URL="/home/val";
     UI.webSocketURL=".";
+    UI.URL=",";
 
-    "use strict";
     var rtrim = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g;
     var globalEval=function( code ) {
 	var script,indirect = eval;
@@ -1744,6 +1746,7 @@
                           {node: "heading",size: "h4",text: HPanels[i]},
                           {node: "descriptionList", items:panel_methods[HPanels[i]]},
                           {node: "heading",size: "h5",text: "Live example"},
+                          {node: "heading",size: "h3",text: "TestWindow must exist"},
                           {node: "paragraph",text:"If TestWindow does not exist, either create it by creating ot in the main Panels tab, live example or in the windows open page"},
                           {name: "Input_params",field: "textArea", value: cmd[HPanels[i]]},
                           {name: "doit", node: "button", text: "Go",action: function(that){
