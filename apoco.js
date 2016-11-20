@@ -125,7 +125,7 @@ require("./Fields");
                     }
                 }
                 var b = document.body;
-                Apoco.Observer.observe(b, { childList: true, subtree: true, attributeFilter: ["id"] });
+                Apoco.Observer.observe(b, { childList: true, subtree: true, attributes: true, attributeFilter: ["id"] });
                 Apoco.Utils.observer.add(this.dependsOn, doit, this);
             } else {
                 this.action(this);
@@ -2136,19 +2136,6 @@ require("./DisplayBase");
             d.classList.add("slideshow_controls");
             u = document.createElement("ul");
             d.appendChild(u);
-            u.addEventListener("mouseover", function (e) {
-                if (e.target.tagName === "LI") {
-                    e.stopPropagation();
-                    e.target.classList.add("ui-icon-hover");
-                }
-            });
-            u.addEventListener("mouseout", function (e) {
-                if (e.target.tagName === "LI") {
-                    e.stopPropagation();
-                    e.target.classList.remove("ui-icon-hover");
-                }
-            });
-
             for (var i = 0; i < icons.length; i++) {
                 if (icons[i].action === "showFullscreen" && this.fullscreen !== true) {
                     continue;
@@ -2181,7 +2168,7 @@ require("./DisplayBase");
                     };
                 }(icons[i], this), false);
                 s = document.createElement("span");
-                s.classList.add("ui-icon", icons[i].class);
+                s.classList.add(icons[i].class, "ui-icon");
                 l.appendChild(s);
                 u.appendChild(l);
             }
@@ -4724,6 +4711,8 @@ require("./Types.js");
 },{"./Types.js":15,"./declare":19}],12:[function(require,module,exports){
 "use strict";
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 var Apoco = require('./declare').Apoco;
 require("./Utils");
 require("./Popups");
@@ -4801,8 +4790,11 @@ require("./Window");
             if (name === undefined) {
                 throw new Error("Panel._UIGet: panel name is undefined");
             }
-            if (!UI) {
+            if ((typeof UI === "undefined" ? "undefined" : _typeof(UI)) === undefined) {
                 throw new Error("Panels: UIGet needs UI.Panels to be defined");
+            }
+            if (_typeof(UI.Panels) === undefined) {
+                throw new Error("Panel: UI.Panels is not defined");
             }
             for (var k in UI.Panels) {
                 if (k == name) {
@@ -4942,7 +4934,9 @@ require("./Window");
             }
         },
         add: function add(panel) {
-
+            if (!panel) {
+                throw new Error("Panel.add must have a name or object");
+            }
             if (Apoco.type['string'].check(panel)) {
                 var w = this._UIGet(panel);
                 panel = w;
