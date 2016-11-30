@@ -459,6 +459,7 @@ var UI={};
                 k.id=HFields[i];
                 k.dependsOn=HFields[i];
                 k.action=function(that){
+              //      console.log("starting field action");
                     var p=that.getChild("doit");
                     p.element.click();
                 },
@@ -479,7 +480,7 @@ var UI={};
                               {name: "Input_params",field: "textArea", value: that.Commands[i]},
                               {name: "doit", node: "button", text: "Go",
                                action: function(that){
-                                   //                        console.log("button action is here");
+                              //     console.log("Field button action is here");
                                    var f=that.parent.getChild("Input_params");
                                    if(!f){
                                        throw new Error("can't get input params");
@@ -488,10 +489,11 @@ var UI={};
                                    globalEval(f.getValue());
                                    //         console.log("parms are " + dataObject);
                                    if(Apoco.type["object"].check(dataObject)){
-                                       //             console.log("and it is an object");
+                                  //     console.log("and it is an object");
                                        var name=dataObject.name;
+                                 //      console.log("that.parent.getChild %j",that.parent.getChild(name));
                                        if(that.parent.getChild(name)){
-                                         //  console.log("deleting child");
+                                   //        console.log("deleting child " + name);
                                            that.parent.deleteChild(name);
                                        }
                                        //            console.log("adding child");
@@ -539,6 +541,15 @@ var UI={};
                     "<code>var r=field.getInputElement()</code>",
                     "return:HTMLObject",
                     "The input node"
+                ]},
+                addOptions:{ descriptions:[
+                    "<code> field.addOptions(['adc','ddfg','dddgf']); </code>"
+                ]},
+                deleteOptions:{ descriptions:[
+                    "<code> field.removeOptions(); </code>"
+                ]},
+                contains:{descriptions:[
+                    "<code> var array=field.contains(options_array,value);<code>"
                 ]},
                 resetValue:{descriptions:[
                     "<code>var r=field.resetValue()</code>",
@@ -1054,13 +1065,28 @@ var UI={};
                       {label: "resizable",descriptions:["type: boolean","Add the resize widget to the bottom rhs"]},
                        {label:"hidden",descriptions:["type:boolean","default: false","add the node to the DOM"]}
                   ]},
-            menu:{  required:[{label: "list",description:""}],
-                    options:[{label: "label",description:""},
+            menu:{  required:[{label: "list",descriptions:["type: objectArray","which must contain a name, key value pair and optionally an action and/or label ","<code>{name:'menu1',action:some_function,label:'some_string'}</code>", "action: A function that receives one arg which is 'this'","the action can also be 'default' in which case the following code is substituted",
+                                                           "<br><code> var select_menu=function(that,index){<br>" +
+                                                           mk_spaces(2) +"var name=that.menu[index].name;<br>" +
+                                                           mk_spaces(2) +"var p=that.getSiblings();<br>" +
+                                                           mk_spaces(2) + "if(!p){<br>" +
+                                                           mk_spaces(4) + "throw new Error('Could not find siblings of ' + that.parent.name);<br>" +
+                                                           mk_spaces(2) + "}<br>" +
+                                                           mk_spaces(2) + "for(var i=0;i &#60 p.length;i++){<br>" +
+                                                           mk_spaces(4) + "if(p[i].id == name){<br>" +
+                                                           mk_spaces(6) +" p[i].show();<br>" +
+                                                           mk_spaces(4) + "}<br>" +
+                                                           mk_spaces(4) + "else{<br>" +
+                                                           mk_spaces(6) +" p[i].hide();<br>" +
+                                                           mk_spaces(4) + "}<br>" +
+                                                           mk_spaces(2) + "}<br> }; </code>"]}],
+                    options:[{label: "selected",descriptions:["type:string","name of the menu from the list"]},
                              {label:"hidden",descriptions:["type:boolean","default: false","add the node to the DOM"]},
-                             {label: "heading",description:""},
+                             {label: "heading",descriptions:["type:string","Add a Heading to the top of the menu "]},
                             ]},
             slideshow:{options:[{label: "values",descriptions:["type: objectArray","array of Image objects","<code> var values=[{src:'css/images/image1.png'},{src:'css/images/image2.png'}]"]},
                                 {label: "delay",descriptions:["type: integer","default: 4000", "time in milliseconds to display each image"]},
+                                {label:"fit_to",descriptions:["type: string -  'width'or'height'","default: 'height'","defaults to fitting the slideshow to the height of the parent element, otherwise changes the height of the parent element so the images fit the width "]},
                                 {label:"controls",descriptions:["type: Boolean","default: true","display the controls"]},
                                 {label:"thumbnails",descriptions:["type: Boolean","default: false","display the thumbnails"]},
                                 {label: "autoplay",descriptions:["type: Boolean","default: true","start playing immeditately"]},
@@ -1132,11 +1158,13 @@ var UI={};
                                    throw new Error("can't get input params");
                                }
                                var n=that.parent.id;
-                               globalEval(f.getValue());
+                         
                                var d=Apoco.Panel.get("Displays").getChild((n+"Display"));
                                if( d!== null){
+                                 // console.log("deleting " + n + "Display");
                                    Apoco.Panel.get("Displays").deleteChild((n+"Display"));
                                }
+                               globalEval(f.getValue());
                                var p=window[(n + "_obj")];
                                if(p){
                                    var dobj=p;
@@ -1173,6 +1201,7 @@ var UI={};
 
         }
         var display_methods_list={
+            reset:["<code> my_display.reset();</code>","deselect all child elements"],
             show:["<code> var v=my_display.show();</code>","params: none","return: boolean","add the root display element to the DOM"],
             getElement:["<code> var v=my_display.getElement();</code>","params: none","return: htmlobject"," the root element of the display"],
             getChild:["<code>var c=my_display.getChild(name);</code>","params: type: string - name as defined in the components array ","return: object","returns null on fail"],
@@ -1415,7 +1444,18 @@ var UI={};
                     des: "Listens for messages sent by publish,websocket or dispatch methods"
                    },
             publish:{code: "<code>Apoco.IO.publish(object);</code>",
-                     items:[{label:"object",descriptions:["object contains and Array of key value Objects called publish","e.g <br> <code>var object={publish:[{name:'some_name',<br>" + mk_spaces(11)+ "action:my_func(that,data){ <br> " + mk_spaces(14) + "alert('got data' + data);<br> "+ mk_spaces(14)+ "}<br>"+ mk_spaces(13) + "}<br> " + mk_spaces(11) + "// add another here <br> "+ mk_spaces(11)+ "] <br> "+ mk_spaces(6) + "};</code>","Note: 'that' in my_func is a reference to the calling object"]}],
+                     items:[{label:"object",descriptions:["object contains and Array of key value Objects called publish",
+                                                          "e.g <br> <code>var object={publish:[{name:'some_name',<br>" + mk_spaces(11) +
+                                                          "action:my_func(that,name){ <br> " + mk_spaces(14) +
+                                                          "alert('got name ' + name);<br> "+ mk_spaces(14)+
+                                                          "}<br>"+ mk_spaces(13) +
+                                                          "},<br> " + mk_spaces(11) +
+                                                          "// or alternatively just send the data" + mk_spaces(11) +
+                                                          "<br> " + mk_spaces(11) +
+                                                          "{name:'another_name',<br>" + mk_spaces(12) +
+                                                          "data:'Hello from another_name' <br>" + mk_spaces(11) +  "}" + mk_spaces(8) +
+                                                          "<br>" + mk_spaces(11) + 
+                                                          "// add another here <br> "+ mk_spaces(11)+ "] <br> "+ mk_spaces(6) + "};</code>","Note: 'that' in my_func is a reference to the calling object","Typically the action function is used when an eventListener needs to be added to the calling element, see example below","Otherwise calling publish with name and data is just polyfill for Apoco.IO.dispatch(name,some_data)"]}],
                      cmd: "Apoco.IO.publish({publish:[{name:'mySignal',action:function(that,name){ var t=Apoco.Panel.get('IO').getChild('publishMethods'); t.element.addEventListener('click',function(e){ Apoco.IO.dispatch(name,'hullo from publish');},false); }}]}); // press Go to initialise, and then click anywhere in the panel to send data- the data will be caught on the listen page",
                      ret: "none",
                      des:""
@@ -1646,16 +1686,13 @@ var UI={};
     };
 
     var select_tabs=function (that,index){
-        if(!that){
-            console.log("select_tabs: that is  " + that);
-        }
         var name=that.name;
-       // console.log("select_tabs: trying to show " + name);
+        //console.log("select_tabs: trying to show " + name);
         if(that.parent.selected){
             Apoco.Panel.hide(that.parent.selected.name);
         }
-     //   if(name !== that.selected){
-          //  console.log("select_tabs: trying to show " + that.selected);
+       // if(name !== that.selected){
+        //  console.log("select_tabs: trying to show " + that.selected);
         //Apoco.Panel.hide(that.selected);
 
         Apoco.Panel.show(name);
@@ -1664,12 +1701,12 @@ var UI={};
             var ar=b.getChildren();
             for(var i=0; i< ar.length; i++){
                 var n=ar[i].getKey();
-                // console.log("select_tabs n is " +  n);
+             //   console.log("select_tabs n is " +  n);
                 if(n == "Blurb" ||  n == (name +"Menu")){
                     ar[i].show();
                 }
                 else{
-                    //   console.log("select_tabs hiding " + n );
+               //     console.log("select_tabs hiding " + n );
                     ar[i].hide();
                 }
                 if(n === (name + "Menu")){
