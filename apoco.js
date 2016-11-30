@@ -281,22 +281,24 @@ require("./Fields");
             }
         },
         delete: function _delete(msg_from_parent) {
-            if (this.listen) {
-                Apoco.IO.unsubscribe(this);
-            }
-            if (this.draggable) {
-                console.log("Need method to delete draggable");
-            }
-            this.deleteAll();
-            if (this.element && this.element.parentNode) {
-                this.element.parentNode.removeChild(this.element);
-                this.element = null;
-            } else {
-                console.log("this element should not be null " + this.id);
-            }
-
             if (this.parent && msg_from_parent === undefined) {
                 this.parent.deleteChild(this);
+            } else {
+                if (this.listen) {
+                    Apoco.IO.unsubscribe(this);
+                }
+                if (this.draggable) {
+                    console.log("Need method to delete draggable");
+                }
+                this.deleteAll();
+                if (this.element) {
+                    if (this.element.parentNode) {
+                        this.element.parentNode.removeChild(this.element);
+                    }
+                    this.element = null;
+                } else {
+                    console.log("this element should not be null " + this.id);
+                }
             }
         }
     };
@@ -335,7 +337,6 @@ require("./Nodes.js");
 
             if (this.components !== undefined) {
                 for (var i = 0; i < this.components.length; i++) {
-                    this.components[i].parent = that;
                     el = document.createElement("div");
                     el.classList.add("fieldset");
                     if (this.components[i].class) {
@@ -364,9 +365,15 @@ require("./Nodes.js");
         getChildren: function getChildren() {
             var comp;
             var comp = this.getField();
+
             var c = this.getNode();
-            comp.concat(c);
-            return comp;
+
+            if (comp.length > 0) {
+                comp.concat(c);
+                return comp;
+            }
+
+            return c;
         },
         getChild: function getChild(name) {
             var k;
@@ -379,8 +386,10 @@ require("./Nodes.js");
                 if (k !== null && !Apoco.type["array"].check(k)) {
                     return k;
                 }
+                return null;
             }
-            return null;
+
+            return this.getChildren();
         },
         getField: function getField(name) {
             if (name !== undefined) {
@@ -407,8 +416,10 @@ require("./Nodes.js");
         deleteChild: function deleteChild(name) {
             if (name !== undefined) {
                 if (this.getNode(name) !== null) {
+                    console.log("getNode got %j" + this.getNode(name));
                     this.deleteNode(name);
                 } else if (this.getField(name) !== null) {
+                    console.log("getField got %j" + this.getField(name));
                     this.deleteField(name);
                 } else {
                     throw new Error("DisplayFieldset: deleteChild cannot find " + name);
@@ -431,6 +442,7 @@ require("./Nodes.js");
                 n = Apoco.node(d, el);
             }
             if (n) {
+                n.parent = this;
                 this.element.appendChild(n.element);
                 this.nodes.push(n);
                 return n;
@@ -476,6 +488,7 @@ require("./Nodes.js");
                     p = d;
                 } else {
                     p = Apoco.field[d.field](d, el);
+                    p.parent = this;
                 }
                 if (!p) {
                     throw new Error("Cannot make field " + d.field);
@@ -630,14 +643,13 @@ require("./DisplayFieldset");
             }
             header.appendChild(h);
             var close = document.createElement("span");
+            close.innerHTML = "&#x2715;";
             close.classList.add("ui-icon", "ui-icon-close");
             header.appendChild(close);
             var c = function c(e) {
                 e.stopPropagation();
-
-                that.delete();
+                that.hide();
             };
-
             close.addEventListener("click", c, false);
 
             fp = document.createElement("ul");
@@ -785,6 +797,7 @@ require("./DisplayFieldset");
                     this.buttons[i].element.parentNode.removeChild(this.buttons[i].element);
                 }
             }
+
             this.buttons.length = 0;
         },
         deleteButton: function deleteButton(name) {
@@ -1868,7 +1881,7 @@ require("./DisplayBase");
 
     var select_menu = function select_menu(that, index) {
         var name = that.menu[index].name;
-        var p = that.getSiblings();
+        var p = that.getSibling();
         if (!p) {
             throw new Error("Could not find siblings of " + that.parent.name);
         }
@@ -1885,7 +1898,6 @@ require("./DisplayBase");
         _execute: function _execute() {
             var s, u;
 
-            this.selected = undefined;
             this.menu = [];
             this.element = document.createElement("div");
             this.element.id = this.id;
@@ -1908,6 +1920,11 @@ require("./DisplayBase");
                 this.list[i].parent = this;
                 this.addMenu(this.list[i], u);
             }
+            if (this.selected) {
+                this.select(this.selected);
+            } else {
+                this.selected = undefined;
+            }
             this.list.length = 0;
         },
         update: function update(name) {
@@ -1928,7 +1945,7 @@ require("./DisplayBase");
             this.selected = null;
             var p = this.element.getElementsByTagName("li");
             for (var i = 0; i < p.length; i++) {
-                p[i].classList.remove("ui-state-active");
+                p[i].classList.remove("selected", "ui-state-active");
             }
         },
         getMenu: function getMenu(name) {
@@ -1953,6 +1970,9 @@ require("./DisplayBase");
             index = this.menu.length;
 
             d.element = document.createElement("li");
+            if (d.class) {
+                d.element.classList.add(d.class);
+            }
             if (d.seperator !== undefined) {
                 d.element.classList.add("seperator");
                 s = document.createElement("span");
@@ -1972,14 +1992,18 @@ require("./DisplayBase");
                 d.parent = this;
                 parent_element.appendChild(d.element);
                 this.menu[index] = d;
-
+                if (d.action === "default") {
+                    d.action = select_menu;
+                }
                 if (d.action !== undefined) {
                     d.element.addEventListener("click", function (t, that) {
                         return function (e) {
                             e.stopPropagation();
 
-                            t.action(t);
-                            that.select(t.name);
+                            var p = t.action(t);
+                            if (p !== false && p !== null) {
+                                that.select(t.name);
+                            }
                         };
                     }(d, that), false);
                 }
@@ -2022,9 +2046,9 @@ require("./DisplayBase");
 
                     c = this.selected.element.parentNode.children;
                     for (var j = 0; j < c.length; j++) {
-                        c[j].classList.remove("ui-state-active");
+                        c[j].classList.remove("selected", "ui-state-active");
                     }
-                    this.selected.element.classList.add("ui-state-active");
+                    this.selected.element.classList.add("selected", "ui-state-active");
                     return;
                 }
             }
@@ -2066,7 +2090,8 @@ require("./DisplayBase");
             fade: false,
             fadeDuration: 2000,
             current: 0,
-            controls: true
+            controls: true,
+            fit_to: "height"
         };
         var f,
             that = this;
@@ -2176,43 +2201,73 @@ require("./DisplayBase");
             that.element.appendChild(d);
         },
         _calculateCover: function _calculateCover(v) {
-            var that = this;
-            this._setWidth();
-            var ar = this.width / this.height;
-            v.SSimage.style.margin = "0";
-            if (v.aspect_ratio > ar) {
-                var h = that.width / v.aspect_ratio;
 
-                var w = that.width.toString() + "px";
+            var ar, w, h;
+            w = window.getComputedStyle(this.slideshow_container, null).getPropertyValue("width").split("px");
+            h = window.getComputedStyle(this.slideshow_container, null).getPropertyValue("height").split("px");
+            this.width = parseInt(w);
+            this.height = parseInt(h);
 
-                v.SSimage.style.width = w;
-                v.SSimage.style.height = h.toString() + "px";
-                h = (that.height - h) / 2;
-                v.SSimage.style.marginTop = h.toString() + "px";
-                v.SSimage.style.marginBottom = h.toString() + "px";
+
+            if (parseInt(this.height) > 0) {
+
+                ar = this.width / this.height;
             } else {
-                var w = that.height * v.aspect_ratio;
+                ar = 0;
+            }
 
-                v.SSimage.style.width = w + "px";
-                v.SSimage.style.height = that.height + "px";
-                w = (that.width - w) / 2;
-                v.SSimage.style.marginLeft = w + "px";
-                v.SSimage.style.marginRight = w + "px";
+
+            if (this.fit_to === "width") {
+                this._setToWidth(v, ar);
+            } else if (v.aspect_ratio > ar) {
+                this._setToWidth(v, ar);
+            } else {
+                this._setToHeight(v, ar);
             }
         },
-        _setWidth: function _setWidth() {
-            this.width = window.getComputedStyle(this.slideshow_container, null).getPropertyValue("width").split("px");
-            this.height = window.getComputedStyle(this.slideshow_container, null).getPropertyValue("height").split("px");
 
-            this.height = parseInt(this.height);
-            this.width = parseInt(this.width);
+        _setToHeight: function _setToHeight(v, ar) {
+            var w,
+                h,
+                that = this;
+            v.SSimage.style.margin = "0";
+            w = that.height * v.aspect_ratio;
+
+            v.SSimage.style.width = w + "px";
+            v.SSimage.style.height = that.height + "px";
+            w = (that.width - w) / 2;
+            v.SSimage.style.marginLeft = w + "px";
+            v.SSimage.style.marginRight = w + "px";
+        },
+        _setToWidth: function _setToWidth(v, ar) {
+            var w,
+                h,
+                that = this;
+            v.SSimage.style.margin = "0";
+            h = this.width / v.aspect_ratio;
+
+            if (this.height < h && this.fit_to === "width") {
+                h = parseInt(h);
+
+                this.element.style.height = h + "px";
+                this.height = h;
+            }
+
+            w = that.width.toString() + "px";
+
+            v.SSimage.style.width = w + "px";
+            v.SSimage.style.height = h + "px";
+            if (this.fit_to !== "width") {
+                h = (that.height - h) / 2;
+                v.SSimage.style.marginTop = h + "px";
+                v.SSimage.style.marginBottom = h + "px";
+            }
         },
         _afterShow: function _afterShow() {
             var that = this,
                 lis = [];
 
 
-            this._setWidth();
             for (var i = 0; i < this.values.length; i++) {
                 if (this.values[i].loaded) {
                     this._calculateCover(this.values[i]);
@@ -2271,8 +2326,8 @@ require("./DisplayBase");
 
                 this.promises[i].then(function (v) {
                     v.SSimage.src = v.src;
-                    that._calculateCover(v);
                     v.loaded = true;
+                    that._calculateCover(v);
                 });
             }
             if (that.controls === true) {
@@ -2515,6 +2570,9 @@ require("./DisplayBase.js");
             index = this.tabs.length;
             t.element = document.createElement("li");
             t.element.classList.add("ui-state-default", "ui-corner-top");
+            if (t.class) {
+                t.element.classList.add(t.class);
+            }
             s = document.createElement("span");
             s.textContent = label;
             t.element.appendChild(s);
@@ -2523,8 +2581,12 @@ require("./DisplayBase.js");
             this.tabs[index].parent = this;
             if (t.action) {
                 t.element.addEventListener("click", function (e) {
-                    t.action(t, index);
-                    that.select(t.name);
+
+                    e.stopPropagation();
+                    var p = t.action(t, index);
+                    if (p !== false && p !== null) {
+                        that.select(t.name);
+                    }
                 }, false);
             }
             tablist.appendChild(t.element);
@@ -2601,7 +2663,14 @@ require("./DisplayBase.js");
                     this.tabs[i].element.classList.remove("selected", "ui-state-active", "ui-tabs-active");
                 }
             }
+        },
+        reset: function reset() {
+            for (var i = 0; i < this.tabs.length; i++) {
+                this.tabs[i].element.classList.remove("selected", "ui-state-active", "ui-tabs-active");
+            }
+            this.selected = null;
         }
+
     };
 
     Apoco.Utils.extend(ApocoMakeTabs, Apoco._DisplayBase);
@@ -3975,105 +4044,105 @@ var Promise = require('es6-promise').Promise;
     Apoco.Utils.extend(ImageArrayField, _Field);
 
     var AutoCompleteField = function AutoCompleteField(d, element) {
-        var v,
-            rect,
-            offset = {};
+        var v;
         var box,
             that = this;
-        var contains = function contains(arr, item) {
-            var count = 0,
-                a,
-                n = [];
-
-            item = item.toLowerCase();
-            for (var i = 0; i < arr.length; i++) {
-                a = arr[i].toLowerCase();
-                if (a.indexOf(item) !== -1) {
-                    n[count] = arr[i];
-                    count++;
-                }
-                if (count === 4) {
-                    return n;
-                }
-            }
-            return n;
-        };
-        function getOffset(object, offset) {
-            if (!object) {
-                return;
-            }
-            offset.x += object.offsetLeft;
-            offset.y += object.offsetTop;
-            getOffset(object.offsetParent, offset);
-        }
-
+        var pubsub;
         d.field = "AutoCompleteField";
         d.type = "string";
 
         _Field.call(this, d, element);
+        if (this.options === undefined) {
+            this.options = [];
+        }
         box = document.createElement("div");
         box.classList.add(this.type, "apoco_autocomplete");
         this.element.appendChild(box);
+        var p = document.createElement("span");
+        p.innerHTML = "&#x26B2;";
+        box.appendChild(p);
         this.input = document.createElement("input");
+        this.input.setAttribute("placeholder", "Search");
         if (this.required === true) {
             this.input.required = true;
         }
         this.input.setAttribute("type", this.html_type);
         box.appendChild(this.input);
 
-        Apoco.sort(this.options, "string");
+        this.select = document.createElement("ul");
+        this.select.classList.add("choice", "ui-autocomplete", "ui-menu", "ui-front", "ui-widget-content");
+        this.select.style.visibility = "hidden";
+        box.appendChild(this.select);
+        var handleEvent = function handleEvent(e) {
+            var pubsub;
+            switch (e.type) {
+                case "input":
+                    var r;
 
-        var select = document.createElement("ul");
-        select.classList.add("choice", "ui-autocomplete", "ui-menu", "ui-front", "ui-widget-content");
-        select.style.visibility = "hidden";
-        select.addEventListener("click", function (e) {
-            if (e.target.tagName === "LI") {
-                e.stopPropagation();
-                e.preventDefault();
-                that.input.value = e.target.textContent;
-                select.style.visibility = "hidden";
-            }
-        });
-        select.addEventListener("mouseover", function (e) {
-            if (e.target.tagName === "LI") {
-                e.stopPropagation();
-                e.preventDefault();
-                e.target.classList.add("ui-state-hover");
-            }
-        });
+                    var v = that.input.value;
 
-        select.addEventListener("mouseout", function (e) {
-            if (e.target.tagName === "LI") {
-                e.stopPropagation();
-                e.preventDefault();
-                e.target.classList.remove("ui-state-hover");
+                    e.stopPropagation();
+                    Apoco.IO.dispatch(pubsub, v);
+                    that.select.style.visibility = "hidden";
+                    r = that.contains(that.options, v);
+                    if (r.length > 0) {
+                        that._make_list(r);
+                        that.select.style.visibility = "visible";
+                    }
+                    break;
+                case "blur":
+                    e.stopPropagation();
+                    that.select.style.visibility = "hidden";
+                    break;
+                case "keypress":
+                    pubsub = that.name + "_value_selected";
+                default:
+                    return;
             }
-        });
+        };
 
-        box.appendChild(select);
-        var options = [];
-        for (var i = 0; i < 4; i++) {
-            options[i] = document.createElement("li");
-            select.appendChild(options[i]);
+        for (var i = 0; i < 10; i++) {
+            this.select.appendChild(document.createElement("li"));
         }
 
-        this.input.addEventListener("keyup", function (e) {
-            var r;
+        this.select.addEventListener("mousedown", function (e) {
             e.stopPropagation();
-            v = that.input.value;
-            offset = { x: 0, y: 0 };
-            rect = that.input.getBoundingClientRect();
-            getOffset(select, offset);
-            select.style.top = (rect.bottom + window.scrollY - offset.y).toString() + "px";
-            select.style.left = (rect.left + window.scrollX - offset.x).toString() + "px";
-            select.style.visibility = "hidden";
-            r = contains(that.options, v);
-            for (var i = 0; i < r.length; i++) {
-                options[i].textContent = r[i];
+            pubsub = that.name + "_value_selected";
+            that.input.value = e.target.textContent;
+            Apoco.IO.dispatch(pubsub, that.input.value);
+
+            that.select.style.visibility = "hidden";
+        }, false);
+
+        this.input.addEventListener("input", function (e) {
+            var r;
+
+            var v = that.input.value;
+            pubsub = that.name + "_value_changed";
+            e.stopPropagation();
+            Apoco.IO.dispatch(pubsub, v);
+            that.select.style.visibility = "hidden";
+            r = that.contains(that.options, v);
+            if (r.length > 0) {
+                that._make_list(r);
+                that.select.style.visibility = "visible";
             }
-            select.style.visibility = "visible";
-            this.value = v;
-        });
+        }, false);
+
+        this.input.addEventListener("keyup", function (e) {
+            e.stopPropagation();
+            if (e.key === "Enter") {
+                pubsub = that.name + "_value_selected";
+
+                var v = that.input.value;
+                Apoco.IO.dispatch(pubsub, v);
+            }
+        }, true);
+        this.input.addEventListener("blur", function (e) {
+            e.stopPropagation();
+            that.select.style.visibility = "hidden";
+        }, true);
+
         if (this.action) {
             this.action(this);
         }
@@ -4081,6 +4150,50 @@ var Promise = require('es6-promise').Promise;
     };
 
     AutoCompleteField.prototype = {
+        deleteOptions: function deleteOptions() {
+            this.options.length = 0;
+        },
+        addOptions: function addOptions(n) {
+            for (var i = 0; i < n.length; i++) {
+                this.options.push(n[i]);
+            }
+            if (this.options.length > 1) {
+                Apoco.sort(this.options, "string");
+            }
+        },
+        _make_list: function _make_list(ar) {
+            var p;
+            var l = this.element.getElementsByTagName("li");
+
+            for (var i = 0; i < 10; i++) {
+                if (ar[i]) {
+                    l[i].textContent = ar[i];
+                    l[i].style.visibility = "inherit";
+                } else {
+                    l[i].textContent = "";
+                    l[i].style.visibility = "hidden";
+                }
+            }
+        },
+        contains: function contains(arr, item) {
+            var count = 0,
+                a,
+                n = [];
+
+            item = item.toLowerCase();
+            for (var i = 0; i < arr.length; i++) {
+                a = arr[i].toLowerCase();
+                if (arr[i].startsWith(item)) {
+                    n[count] = arr[i];
+                    count++;
+                }
+                if (count === 10) {
+                    return n;
+                }
+            }
+            return n;
+        },
+
         popupEditor: null
     };
 
@@ -4348,7 +4461,6 @@ var Promise = require('es6-promise').Promise;
             } else {
                 defaults.url = ".";
             }
-
             if (type !== "GET" && type !== "POST") {
                 throw new Error("REST: only knows about GET and POST not " + type);
             }
@@ -4363,15 +4475,19 @@ var Promise = require('es6-promise').Promise;
             if (settings.url === "") {
                 throw new Error("Apoco.REST Must have a url");
             }
-            data = JSON.stringify(data);
-
-
+            if (data) {
+                data = JSON.stringify(data);
+            }
             var promise = new Promise(function (resolve, reject) {
                 var request = new XMLHttpRequest();
                 var stateChange = function stateChange() {
                     if (request.readyState === XMLHttpRequest.DONE) {
                         if (request.status === 200) {
-                            resolve(JSON.parse(request.responseText));
+                            if (settings.mimeType === 'application/json') {
+                                resolve(JSON.parse(request.responseText));
+                            } else {
+                                resolve(request.responseText);
+                            }
                         } else {
                             reject(request.status);
                             if (!request) {
@@ -4446,6 +4562,7 @@ require("./Types.js");
                 case "paragraph":
                 case "label":
                 case "anchor":
+                case "button":
                     this.element.innerHTML = text;
                     this.text = text;
                     return;
@@ -4815,6 +4932,32 @@ require("./Window");
             }
             return null;
         },
+        _dumpHTML: function _dumpHTML(filename) {
+            var nodes = [],
+                c,
+                found,
+                t = new String();
+            var file;
+            for (var i = 0; i < this._list.length; i++) {
+                for (var j = 0; j < this._list[i].components.length; j++) {
+                    c = this._list[i].components[j];
+                    if (c) {
+                        t = "<!-- INSERT INTO ";
+                        if (Apoco.type.object.check(c.DOM)) {
+                            t = t.concat(c.DOM.id);
+                        } else {
+                            t = t.concat(c.DOM);
+                        }
+                        t = t.concat(" -->");
+                        nodes.push(t);
+                        t = c.element.outerHTML;
+                        nodes.push(t);
+                    }
+                }
+            }
+            console.log(nodes);
+            return nodes;
+        },
         get: function get(k) {
             var u = this._inList(k);
             if (u !== null) {
@@ -4958,16 +5101,13 @@ require("./Window");
             for (var i = 0; i < n; i++) {
                 obj = this._list[i];
                 obj.deleteChildren();
-
                 if (promise_resolve) {
                     if (i === n - 1) {
                         promise_resolve();
                     }
                 }
             }
-
             Apoco.Window._closeAll();
-
             this._list.length = 0;
         },
         delete: function _delete(name) {
@@ -5064,13 +5204,13 @@ require("./Window");
                 throw new Error("Panel: has no children " + this.name);
             }
             for (var i = 0; i < this.components.length; i++) {
+
                 this.components[i].delete("message from parent");
             }
             this.components.length = 0;
         },
         deleteChild: function deleteChild(obj) {
             var index = -1;
-
             if (!obj) {
                 throw new Error("Apoco.Panel: deleteChild obj is null");
             }
@@ -5078,9 +5218,6 @@ require("./Window");
                 obj = this.getChild(obj);
             }
 
-            if (obj.listen) {
-                Apoco.unsubscribe(obj);
-            }
             for (var i = 0; i < this.components.length; i++) {
                 if (obj === this.components[i]) {
                     index = i;
@@ -5199,8 +5336,6 @@ var Apoco = require('./declare').Apoco;
                 }
 
                 this.close = function () {
-                    console.log("click closed is here");
-                    console.log("Gdiakof is " + Hdialog);
                     if (modal === true) {
                         Apoco.modal.removeChild(Hdialog);
                         document.body.removeChild(Apoco.modal);
