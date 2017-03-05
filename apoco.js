@@ -58,8 +58,6 @@ require("./Fields");
 
     'use strict';
 
-    var _display_components = ["Field", "Node", "Tab", "Grid", "Menu"];
-
     Apoco.display = {};
 
     var dp;
@@ -68,7 +66,8 @@ require("./Fields");
             parent: null,
             element: null,
             DOM: null,
-            id: null
+            id: null,
+            components: []
         };
         var that = this,
             t;
@@ -117,7 +116,9 @@ require("./Fields");
         };
 
         if (this.action) {
-            if (this.dependsOn && !dp) {
+            if (!this.dependsOn) {
+                this.action(this);
+            } else if (this.id !== this.dependsOn && !dp) {
                 if (!Apoco.Observer) {
                     Apoco.Utils.observer.create();
                     if (!Apoco.Observer) {
@@ -127,8 +128,20 @@ require("./Fields");
                 var b = document.body;
                 Apoco.Observer.observe(b, { childList: true, subtree: true, attributes: true, attributeFilter: ["id"] });
                 Apoco.Utils.observer.add(this.dependsOn, doit, this);
+            }
+        }
+
+        this.element = document.createElement("div");
+        this.element.id = this.id;
+
+        this.element.classList.add("apoco_" + this.display);
+        if (this.class) {
+            if (Apoco.type["string"].check(this.class)) {
+                this.element.classList.add(this.class);
             } else {
-                this.action(this);
+                for (var i = 0; i < this.class.length; i++) {
+                    this.element.classList.add(this.class[i]);
+                }
             }
         }
 
@@ -139,49 +152,56 @@ require("./Fields");
 
     Apoco._DisplayBase.prototype = {
         getChildren: function getChildren() {
-            var comp = [];
-            var k;
-            for (var i = 0; i < _display_components.length; i++) {
-                k = "get" + _display_components[i];
-                if (this[k]) {
-                    if (comp.length === 0) {
-                        comp = this[k]();
-                    } else {
-                        comp.concat(this[k]());
-                    }
-
-                    return comp;
-                }
+            if (this.components) {
+                return this.components;
             }
             return null;
         },
         getChild: function getChild(name) {
-            var k;
-            if (name !== undefined) {
-                for (var i = 0; i < _display_components.length; i++) {
-                    var k = "get" + _display_components[i];
-                    if (this[k]) {
-                        return this[k](name);
+            if (name !== undefined && this.components) {
+                for (var i = 0; i < this.components.length; i++) {
+                    if (this.components[i].name == name) {
+                        return this.components[i];
                     }
                 }
-                return null;
             }
             return null;
         },
         deleteChild: function deleteChild(name, no_splice) {
-            var k;
-            if (name !== undefined) {
-                for (var i = 0; i < _display_components.length; i++) {
-                    k = "delete" + _display_components[i];
-                    if (this[k]) {
-                        this[k](name);
-                        return true;
-                    }
-                }
-            } else {
-                throw new Error("deleteChild- needs a name");
+            var n,
+                index = -1;
+            if (name === undefined) {
+                throw new Error("DisplayMenu: deleteMenu needs a name");
             }
+            for (var i = 0; i < this.components.length; i++) {
+                if (this.components[i].name == name) {
+                    index = i;
+
+                    break;
+                }
+            }
+            if (index === -1) {
+                throw new Error("Display:deleteChild  Cannot find component " + name);
+            }
+            this.components[index].element.parentNode.removeChild(this.components[index].element);
+            this.components[index].element = null;
+            if (no_splice === undefined) {
+                this.components.splice(index, 1);
+            }
+
             return null;
+        },
+        deleteChildren: function deleteChildren() {
+            for (var i = 0; i < this.components.length; i++) {
+                if (this.components[i].listen) {
+                    Apoco.unsubscribe(this.components[i]);
+                }
+                this.components[i].element.parentNode.removeChild(this.components[i].element);
+            }
+            this.components.length = 0;
+        },
+        deleteAll: function deleteAll() {
+            this.deleteChildren();
         },
         _getMethods: function _getMethods() {
             var m = [];
@@ -258,6 +278,9 @@ require("./Fields");
                     if (this._afterShow !== undefined) {
                         this._afterShow();
                     }
+                    if (this.action !== undefined && this.id === this.dependsOn) {
+                        this.action(this);
+                    }
                 } else {
                     throw new Error("No valid element for " + this.getKey());
                     return null;
@@ -331,233 +354,97 @@ require("./Nodes.js");
             var el,
                 p,
                 that = this;
-            this.element = document.createElement("div");
-            this.element.id = this.id;
-            this.element.classList.add("field_container", "ui-widget-content", "ui-corner-all");
 
-            if (this.components !== undefined) {
-                for (var i = 0; i < this.components.length; i++) {
-                    el = document.createElement("div");
-                    el.classList.add("fieldset");
-                    if (this.components[i].class) {
-                        el.classList.add(this.components[i].class);
-                    }
-                    if (this.components[i].node) {
-                        this.addNode(this.components[i], el);
-                    } else if (this.components[i].field || this.components[i].type) {
-                        p = this.addField(this.components[i], el);
-                    }
-                }
-                this.components.length = 0;
-            } else {
-                console.log("components for " + this.id + " is undefined");
+            for (var i = 0; i < this.components.length; i++) {
+                el = document.createElement("div");
+
+                this.addChild(i, el);
             }
         },
         _afterShow: function _afterShow() {
-            if (this.fields && this.fields.length > 0) {
-                var e = this.fields[0].getElement();
-                var d = e.getElementsByTagName("input")[0];
-                if (d) {
-                    d.focus();
-                }
-            }
-        },
-        getChildren: function getChildren() {
-            var comp;
-            var comp = this.getField();
-
-            var c = this.getNode();
-
-            if (comp.length > 0) {
-                comp.concat(c);
-                return comp;
-            }
-
-            return c;
-        },
-        getChild: function getChild(name) {
-            var k;
-            if (name !== undefined) {
-                k = this.getField(name);
-                if (k !== null && !Apoco.type["array"].check(k)) {
-                    return k;
-                }
-                k = this.getNode(name);
-                if (k !== null && !Apoco.type["array"].check(k)) {
-                    return k;
-                }
-                return null;
-            }
-
-            return this.getChildren();
-        },
-        getField: function getField(name) {
-            if (name !== undefined) {
-                for (var i = 0; i < this.fields.length; i++) {
-                    if (this.fields[i].name === name) {
-                        return this.fields[i];
+            if (this.components && this.components.length > 0) {
+                for (var i = 0; i < this.components.length; i++) {
+                    if (this.components[i].field) {
+                        var e = this.components[i].getElement();
+                        var d = e.getElementsByTagName("input")[0];
+                        if (d) {
+                            d.focus();
+                        }
+                        break;
                     }
                 }
-                return null;
             }
-            return this.fields;
         },
-        getNode: function getNode(name) {
-            if (name !== undefined) {
-                for (var i = 0; i < this.nodes.length; i++) {
-                    if (this.nodes[i].name !== undefined && this.nodes[i].name === name) {
-                        return this.nodes[i];
-                    }
-                }
-                return null;
-            }
-            return this.nodes;
-        },
-        deleteChild: function deleteChild(name) {
-            if (name !== undefined) {
-                if (this.getNode(name) !== null) {
-                    console.log("getNode got %j" + this.getNode(name));
-                    this.deleteNode(name);
-                } else if (this.getField(name) !== null) {
-                    console.log("getField got %j" + this.getField(name));
-                    this.deleteField(name);
-                } else {
-                    throw new Error("DisplayFieldset: deleteChild cannot find " + name);
-                }
+        addChild: function addChild(index, el, parent_element) {
+            var n, d, p;
+            if (Number.isInteger(index)) {
+                d = this.components[index];
             } else {
-                throw new Error("deleteChild- needs a name");
+                d = index;
+                index = this.components.length;
             }
-        },
-        addNode: function addNode(d, el) {
-            var n, parent_element;
-            if (d.name && this.getNode(d.name) !== null) {
-                throw new Error("Cannot add node with non-unique name");
+            if (d.name && this.getChild(d.name) !== null && this.getChild(d.name).parent !== undefined) {
+                throw new Error("Cannot add component with non-unique name " + d.name);
             }
-            if (d.element) {
-                if (!d.node) {
-                    throw new Error("Apoco.displayFieldset: addNode - object is not a node");
-                }
-                n = d;
-            } else {
+            if (el === undefined && this.display == "form") {
+                el = document.createElement("li");
+            }
+            if (!parent_element) {
+                parent_element = this.element;
+            }
+
+            if (d.node) {
                 n = Apoco.node(d, el);
+            } else if (d.field || d.type) {
+                if (!d.field) {
+                    d.field = Apoco.type[d.type].field;
+                }
+                if (Apoco.field.exists(d.field)) {
+                    n = Apoco.field[d.field](d, el);
+                } else {
+                    throw new Error("no field of type " + d.field + " exists");
+                }
+            } else {
+                throw new Error("Apoco.displayFieldset: meed to specify node type or field");
             }
             if (n) {
                 n.parent = this;
-                this.element.appendChild(n.element);
-                this.nodes.push(n);
+
+                p = n.element.parentNode;
+                if (p) {
+                    parent_element.appendChild(p);
+                } else {
+                    parent_element.appendChild(n.element);
+                }
+                this.components[index] = n;
                 return n;
             } else {
                 throw new Error("Apoco,fieldset, doesn't know how to make " + d.node);
             }
             return null;
         },
-        deleteNode: function deleteNode(name) {
-            var n,
-                index = -1;
-            if (name === undefined) {
-                throw new Error("DisplayFieldset: deleteNode - must supply a name");
-            }
-            for (var i = 0; i < this.nodes.length; i++) {
-                if (this.nodes[i].name === name) {
-                    index = i;
-                    break;
-                }
-            }
-            if (index === -1) {
-                throw new Error("DisplayFieldset: deleteNode cannot find " + name);
-            }
-            this.nodes[index].element.parentNode.removeChild(this.nodes[index].element);
-            this.nodes[index].element = null;
-            this.nodes.splice(index, 1);
-        },
-        addField: function addField(d, el) {
-            var p, parent_element;
-            if (!d.field) {
-                if (d.type) {
-                    d.field = Apoco.type[d.type].field;
-                } else {
-                    throw new Error("Must supply either a field or a type");
-                }
-            }
-
-            if (this.getField(d.name) !== null) {
-                throw new Error("Cannot add field with non-unique name " + d.name);
-            }
-            if (Apoco.field.exists(d.field)) {
-                if (d.element) {
-                    p = d;
-                } else {
-                    p = Apoco.field[d.field](d, el);
-                    p.parent = this;
-                }
-                if (!p) {
-                    throw new Error("Cannot make field " + d.field);
-                }
-            } else {
-                throw new Error("no field of type " + d.field + " exists");
-            }
-            this.fields.push(p);
-
-            this.element.appendChild(p.element);
-
-            return p;
-        },
-        deleteAll: function deleteAll() {
-            for (var i = 0; i < this.fields.length; i++) {
-                this.fields[i].delete();
-            }
-            this.fields.length = 0;
-            for (var i = 0; i < this.nodes.length; i++) {
-                if (this.nodes[i].listen) {
-                    Apoco.unsubscribe(this.nodes[i]);
-                }
-                if (this.nodes[i].element.parentNode) {
-                    this.nodes[i].element.parentNode.removeChild(this.nodes[i].element);
-                }
-            }
-            this.nodes.length = 0;
-        },
-        deleteField: function deleteField(name) {
-            var n,
-                index = -1;
-            if (name === undefined) {
-                throw new Error("DisplayFieldset: deleteNode - must supply a name");
-            }
-            for (var i = 0; i < this.fields.length; i++) {
-                if (this.fields[i].name === name) {
-                    index = i;
-                    break;
-                }
-            }
-            if (this.fields[index].listen) {
-                Apoco.unsubscribe(this.fields[i]);
-            }
-            if (index === -1) {
-                throw new Error("DisplayFieldset: deleteNode cannot find " + name);
-            }
-
-            this.fields[index].element.parentNode.removeChild(this.fields[index].element);
-            this.fields[index].element = null;
-            this.fields.splice(index, 1);
-        },
         getJSON: function getJSON() {
             var js = {};
-            for (var i = 0; i < this.fields.length; i++) {
-                if (this.fields[i].required) {
-                    if (this.fields[i].checkValue() !== true) {
-                        return null;
+            for (var i = 0; i < this.components.length; i++) {
+                if (this.components[i].field) {
+                    if (this.components[i].required) {
+                        if (this.components[i].checkValue() !== true) {
+                            return null;
+                        }
                     }
+                    js[this.components[i].getKey()] = this.components[i].getValue();
                 }
-                js[this.fields[i].getKey()] = this.fields[i].getValue();
             }
             return js;
         },
         check: function check() {
             var valid = true;
 
-            for (var i = 0; i < this.fields.length; i++) {
-                if (!this.fields[i].checkValue()) {
-                    valid = false;
+            for (var i = 0; i < this.components.length; i++) {
+                if (this.components[i].field) {
+                    if (!this.components[i].checkValue()) {
+                        valid = false;
+                    }
                 }
             }
             return valid;
@@ -606,17 +493,14 @@ require("./DisplayFieldset");
         _execute: function _execute() {
             var that = this,
                 fp,
+                lp,
                 header,
                 container,
                 fc,
                 h;
 
-            this.element = document.createElement("div");
-            this.element.id = this.id;
-            this.element.classList.add("apoco_form", "resizable", "ui-widget-content", "ui-corner-all");
-            if (this.class !== undefined) {
-                this.element.classList.add(this.class);
-            }
+            this.element.classList.add("apoco_form", "resizable");
+
             if (!this.height) {
                 this.height = 400;
             }
@@ -629,7 +513,7 @@ require("./DisplayFieldset");
             header.classList.add("form_header", "ui-state-default", "ui-widget-header", "ui-corner-all");
             this.element.appendChild(header);
             if (this.draggable !== false) {
-                this.draggable = Apoco.Utils.draggable(this.element);
+                this.draggable = Apoco.Utils.draggable(this.element, undefined, header);
             }
             container = document.createElement("div");
             container.classList.add("form_scroll");
@@ -658,14 +542,10 @@ require("./DisplayFieldset");
 
             if (this.components) {
                 for (var i = 0; i < this.components.length; i++) {
-                    this.components[i].parent = that;
-                    if (this.components[i].node) {
-                        this.addNode(this.components[i], fp);
-                    } else if (this.components[i].field || this.components[i].type) {
-                        this.addField(this.components[i], fp);
-                    }
+                    lp = document.createElement("li");
+                    console.log("FORM CREATES ELEMENT " + lp);
+                    this.addChild(i, lp, fp);
                 }
-                this.components.length = 0;
             }
 
             if (this.buttons) {
@@ -682,71 +562,7 @@ require("./DisplayFieldset");
                 this.buttons = [];
             }
         },
-        addNode: function addNode(d, parent_element) {
-            var n;
-            var ll = document.createElement("li");
-            if (parent_element === undefined) {
-                parent_element = this.element.querySelector("ul.apoco_form_list");
-            }
-            if (d.name && this.getNode(d.name) !== null) {
-                throw new Error("Cannot add node with non-unique name");
-            }
-            if (d.element && d.element.length > 0) {
-                if (!d.node) {
-                    throw new Error("Apoco.displayFieldset: addNode - object is not a node");
-                }
-                n = d;
-            } else {
-                n = Apoco.node(d, ll);
-            }
-            if (n) {
-                if (!n.element) {
-                    throw new Error("DisplayForm.addNode element is null");
-                }
-                parent_element.appendChild(ll);
 
-                this.nodes.push(n);
-                return n;
-            } else {
-                throw new Error("Apoco,fieldset, doesn't know how to make " + d.node);
-            }
-            return n;
-        },
-        addField: function addField(d, parent_element) {
-            var p;
-            var ll = document.createElement("li");
-            if (parent_element === undefined) {
-                parent_element = this.element.querySelector("ul.apoco_form_list");
-            }
-            if (!d.field) {
-                if (d.type) {
-                    d.field = Apoco.type[d.type].field;
-                } else {
-                    throw new Error("Must supply either a field or a type");
-                }
-            }
-
-            if (this.getField(d.name) !== null) {
-                throw new Error("Cannot add field with non-unique name " + d.name);
-            }
-            if (Apoco.field.exists(d.field)) {
-                if (d.element) {
-                    p = d;
-                } else {
-                    p = Apoco.field[d.field](d, ll);
-                }
-                if (!p) {
-                    throw new Error("Cannot make field " + d.field);
-                }
-            } else {
-                throw new Error("no field of type " + d.field + " exists");
-            }
-
-            this.fields.push(p);
-            parent_element.appendChild(p.element);
-
-            return p;
-        },
         addButton: function addButton(d) {
             var index, r, b;
             d.node = "button";
@@ -782,16 +598,7 @@ require("./DisplayFieldset");
             return this.buttons;
         },
         deleteAll: function deleteAll() {
-            for (var i = 0; i < this.fields.length; i++) {
-                this.fields[i].delete();
-            }
-            this.fields.length = 0;
-            for (var i = 0; i < this.nodes.length; i++) {
-                if (this.nodes[i].element.parentNode) {
-                    this.nodes[i].element.parentNode.removeChild(this.nodes[i].element);
-                }
-            }
-            this.nodes.length = 0;
+            this.deleteChildren();
             for (var i = 0; i < this.buttons.length; i++) {
                 if (this.buttons[i].element.parentNode) {
                     this.buttons[i].element.parentNode.removeChild(this.buttons[i].element);
@@ -1413,10 +1220,6 @@ require("./Sort.js");
                 r,
                 that = this;
 
-            this.element = document.createElement("div");
-            this.element.id = this.id;
-            this.element.classList.add("grid", "ui-widget-content");
-
             this.colElement = document.createElement("div");
             this.colElement.classList.add("head");
             this.element.appendChild(this.colElement);
@@ -1635,6 +1438,19 @@ require("./Sort.js");
                 }
             }
             return null;
+        },
+        getChild: function getChild(key, group, closest) {
+            var t = this.getRow(key, group, closest);
+            return t;
+        },
+        getChildren: function getChildren(group) {
+            var grid;
+            if (group && group !== null) {
+                grid = this.getGrid(group);
+            } else {
+                grid = this.grid[0];
+            }
+            return grid.rows;
         },
         updateRow: function updateRow(cell_data) {
             var row, subGrid, index, g;
@@ -1880,7 +1696,7 @@ require("./DisplayBase");
     };
 
     var select_menu = function select_menu(that, index) {
-        var name = that.menu[index].name;
+        var name = that.components[index].name;
         var p = that.getSibling();
         if (!p) {
             throw new Error("Could not find siblings of " + that.parent.name);
@@ -1897,38 +1713,29 @@ require("./DisplayBase");
     ApocoMakeMenu.prototype = {
         _execute: function _execute() {
             var s, u;
-
-            this.menu = [];
-            this.element = document.createElement("div");
-            this.element.id = this.id;
-            this.element.classList.add("menu", "ui-widget-content", "ui-corner-all");
             if (this.heading) {
                 s = document.createElement("span");
                 s.textContent = this.heading;
                 this.element.appendChild(s);
             }
-            if (this.list === undefined) {
-                this.list = [];
-            }
 
             u = document.createElement("ul");
             u.role = "menubar";
-            u.classList.add("apoco_menu_list", "ui-menu", "ui-widget-content");
+            u.classList.add("apoco_menu_list", "ui-menu");
             this.element.appendChild(u);
 
-            for (var i = 0; i < this.list.length; i++) {
-                this.list[i].parent = this;
-                this.addMenu(this.list[i], u);
+            for (var i = 0; i < this.components.length; i++) {
+
+                this.addMenu(i, u);
             }
             if (this.selected) {
                 this.select(this.selected);
             } else {
                 this.selected = undefined;
             }
-            this.list.length = 0;
         },
         update: function update(name) {
-            var p = this.getMenu(name);
+            var p = this.getChild(name);
             if (p !== null) {
                 p.element.click();
             } else {
@@ -1948,26 +1755,24 @@ require("./DisplayBase");
                 p[i].classList.remove("selected", "ui-state-active");
             }
         },
-        getMenu: function getMenu(name) {
-            if (name !== undefined) {
-                for (var i = 0; i < this.menu.length; i++) {
-                    if (this.menu[i].name == name) {
-                        return this.menu[i];
-                    }
-                }
-                return null;
-            }
-            return this.menu;
-        },
-        addMenu: function addMenu(d, parent_element) {
-            var index,
+        addMenu: function addMenu(index, parent_element) {
+            var d,
                 s,
                 l,
                 that = this;
             if (parent_element === undefined) {
                 parent_element = this.element.getElementsByClassName("apoco_menu_list")[0];
             }
-            index = this.menu.length;
+            if (Number.isInteger(index)) {
+                d = this.components[index];
+            } else {
+                d = index;
+                index = this.components.length;
+            }
+            l = d.label ? d.label : d.name;
+            if (d.name && this.getChild(d.name) !== null && this.getChild(d.name).parent !== undefined) {
+                throw new Error("DisplayMenu: Cannot add component with non-unique name " + d.name);
+            }
 
             d.element = document.createElement("li");
             if (d.class) {
@@ -1981,17 +1786,13 @@ require("./DisplayBase");
                 d.element.appendChild(s);
                 parent_element.appendChild(d.element);
             } else {
-                l = d.label ? d.label : d.name;
-                if (this.getMenu(l) !== null) {
-                    throw new Error("DisplayMenu: get Menu - menu already exists " + l);
-                }
                 d.element.classList.add("ui-menu-item");
                 d.element.setAttribute("role", "menuitem");
                 d.element.textContent = l;
 
                 d.parent = this;
                 parent_element.appendChild(d.element);
-                this.menu[index] = d;
+
                 if (d.action === "default") {
                     d.action = select_menu;
                 }
@@ -2008,41 +1809,14 @@ require("./DisplayBase");
                     }(d, that), false);
                 }
             }
+            this.components[index] = d;
         },
-        deleteAll: function deleteAll() {
-            for (var i = 0; i < this.menu.length; i++) {
-                if (this.menu[i].listen) {
-                    Apoco.unsubscribe(this.menu[i]);
-                }
-                this.menu[i].element.parentNode.removeChild(this.menu[i].element);
-            }
-            this.menu.length = 0;
-        },
-        deleteMenu: function deleteMenu(name) {
-            var n,
-                index = -1;
-            if (name === undefined) {
-                throw new Error("DisplayMenu: deleteMenu needs a name");
-            }
-            for (var i = 0; i < this.menu.length; i++) {
-                if (this.menu[i].name === name) {
-                    index = i;
 
-                    break;
-                }
-            }
-            if (index === -1) {
-                throw new Error("DisplayMenu: deleteMenu Cannot find menu" + name);
-            }
-            this.menu[index].element.parentNode.removeChild(this.menu[index].element);
-            this.menu[index].element = null;
-            this.menu.splice(index, 1);
-        },
         select: function select(val) {
             var c;
-            for (var i = 0; i < this.menu.length; i++) {
-                if (this.menu[i].name == val) {
-                    this.selected = this.menu[i];
+            for (var i = 0; i < this.components.length; i++) {
+                if (this.components[i].name == val) {
+                    this.selected = this.components[i];
 
                     c = this.selected.element.parentNode.children;
                     for (var j = 0; j < c.length; j++) {
@@ -2091,7 +1865,9 @@ require("./DisplayBase");
             fadeDuration: 2000,
             current: 0,
             controls: true,
-            fit_to: "height"
+            fit_to: "height",
+            keepAspectRatio: true,
+            sideArrows: false
         };
         var f,
             that = this;
@@ -2117,12 +1893,12 @@ require("./DisplayBase");
             this.thumbnails = document.createElement("div");
             this.thumbnails.classList.add("thumbnails");
         }
-        if (this.values) {
+        if (this.components) {
             f = Apoco.field["imageArray"]({ name: "slideshow" });
             if (!f) {
                 throw new Error("Slideshow: cannot make imageArray");
             }
-            this.promises = f.loadImages(this.values);
+            this.promises = f.loadImages(this.components);
         } else if (this.editable === true) {
             f = Apoco.field["imageArray"]({ name: "slideshow", editable: this.editable });
         }
@@ -2151,6 +1927,29 @@ require("./DisplayBase");
         handleEvent: function handleEvent(e) {
             if (e.type == "visibilitychange") {
                 this._isVisible(e);
+            }
+        },
+        _sideArrows: function _sideArrows() {
+            var p,
+                q,
+                t = ["right", "left"],
+                that = this;
+            var doit = function doit(e) {
+                e.stopPropagation();
+                if (e.target.classList.contains("left")) {
+                    that.step("next");
+                } else {
+                    that.step("next");
+                }
+            };
+            for (var i = 0; i < 2; i++) {
+                p = document.createElement("div");
+                p.classList.add(t[i]);
+                p.classList.add("arrow");
+                q = document.createElement("i");
+                p.appendChild(q);
+                this.element.appendChild(p);
+                p.addEventListener("click", doit);
             }
         },
         _controls: function _controls() {
@@ -2203,6 +2002,10 @@ require("./DisplayBase");
         _calculateCover: function _calculateCover(v) {
 
             var ar, w, h;
+            if (this.keepAspectRatio === false) {
+                return;
+            }
+
             w = window.getComputedStyle(this.slideshow_container, null).getPropertyValue("width").split("px");
             h = window.getComputedStyle(this.slideshow_container, null).getPropertyValue("height").split("px");
             this.width = parseInt(w);
@@ -2219,6 +2022,8 @@ require("./DisplayBase");
 
             if (this.fit_to === "width") {
                 this._setToWidth(v, ar);
+            } else if (this.fit_to === "height") {
+                this._setToHeight(v, ar);
             } else if (v.aspect_ratio > ar) {
                 this._setToWidth(v, ar);
             } else {
@@ -2244,17 +2049,19 @@ require("./DisplayBase");
                 h,
                 that = this;
             v.SSimage.style.margin = "0";
+            console.log("FIT to WIDTH");
             h = this.width / v.aspect_ratio;
-
+            console.log("need height " + h);
             if (this.height < h && this.fit_to === "width") {
                 h = parseInt(h);
-
+                console.log("setting height to " + h);
                 this.element.style.height = h + "px";
                 this.height = h;
+                console.log("this.height " + this.height);
             }
 
             w = that.width.toString() + "px";
-
+            console.log("new image width is " + w);
             v.SSimage.style.width = w + "px";
             v.SSimage.style.height = h + "px";
             if (this.fit_to !== "width") {
@@ -2268,14 +2075,14 @@ require("./DisplayBase");
                 lis = [];
 
 
-            for (var i = 0; i < this.values.length; i++) {
-                if (this.values[i].loaded) {
-                    this._calculateCover(this.values[i]);
+            for (var i = 0; i < this.components.length; i++) {
+                if (this.components[i].loaded) {
+                    this._calculateCover(this.components[i]);
                 }
             }
             lis = that.slideshow_container.querySelectorAll("li.slide");
 
-            if (lis.length !== that.values.length) {
+            if (lis.length !== that.components.length) {
                 throw new Error("Slideshow: slide lis do not exist");
             }
 
@@ -2290,36 +2097,37 @@ require("./DisplayBase");
                 } else {
                     that.play();
                 }
-            };
+            } else {
+                if (this.components.length > 0) {
+                    this.components[0].element.style.visibility = "visible";
+                    this.current = 0;
+                }
+            }
         },
         _execute: function _execute() {
             var that = this,
-                l,
                 temp,
                 pp;
 
-            this.element = document.createElement("div");
-            this.element.id = this.id;
-            this.element.classList.add("Apoco_slideshow", "ui-widget-content", "ui-corner-all");
             this.slideshow_container = document.createElement("div");
             this.slideshow_container.classList.add("slideshow", "pic_area");
             this.element.appendChild(this.slideshow_container);
             var car = document.createElement("ul");
             car.classList.add("carousel");
             that.slideshow_container.appendChild(car);
-            for (var i = 0; i < this.values.length; i++) {
-                l = document.createElement("li");
-                l.classList.add("slide");
-                car.appendChild(l);
-                this.values[i].SSimage = document.createElement("img");
-                l.appendChild(this.values[i].SSimage);
-                that.values[i].SSimage.parentElement.style.visibility = "hidden";
+            for (var i = 0; i < this.components.length; i++) {
+                this.components[i].element = document.createElement("li");
+                this.components[i].element.classList.add("slide");
+                car.appendChild(this.components[i].element);
+                this.components[i].SSimage = document.createElement("img");
+                this.components[i].element.appendChild(this.components[i].SSimage);
+                this.components[i].SSimage.parentElement.style.visibility = "hidden";
 
-                if (this.values[i].text) {
+                if (this.components[i].text) {
                     temp = document.createElement("div");
-                    l.appendChild(temp);
+                    this.components[i].element.appendChild(temp);
                     pp = document.createElement("p");
-                    pp.textContent = this.values[i].text;
+                    pp.textContent = this.components[i].text;
                     temp.appendChild(pp);
                     this.hasText = true;
                 }
@@ -2333,12 +2141,14 @@ require("./DisplayBase");
             if (that.controls === true) {
                 that._controls();
             }
-            document.addEventListener("visibilitychange", this, false);
+            if (that.sideArrows === true) {
+                that._sideArrows();
+            }
         },
         deleteAll: function deleteAll() {
-            if (this.values) {
-                for (var i = 0; i < this.values; i++) {
-                    this.slideshow_container.removeChild(this.values[i].SSimage);
+            if (this.components) {
+                for (var i = 0; i < this.components; i++) {
+                    this.slideshow_container.removeChild(this.components[i].SSimage);
                 }
             }
             while (this.element.firstChild) {
@@ -2430,31 +2240,31 @@ require("./DisplayBase");
 
             inc = Math.pow(1 / op, 1 / n) - 1.0;
             if (inc <= 0) return;
-            that.values[next].SSimage.parentElement.style.visibility = "visible";
+            that.components[next].element.style.visibility = "visible";
 
-            that.values[next].SSimage.parentElement.style.top = 0;
-            that.values[next].SSimage.parentElement.style.left = 0;
-            that.values[next].SSimage.parentElement.style.opacity = op;
-            that.values[next].SSimage.parentElement.style.filter = 'alpha(opacity=' + op * 100 + ")";
+            that.components[next].element.style.top = 0;
+            that.components[next].element.style.left = 0;
+            that.components[next].element.style.opacity = op;
+            that.components[next].element.style.filter = 'alpha(opacity=' + op * 100 + ")";
 
             timer = setInterval(function () {
                 if (op >= 1.0) {
                     clearInterval(timer);
 
-                    that.values[prev].SSimage.parentElement.style.visibility = "hidden";
-                    that.values[prev].SSimage.parentElement.style.opacity = 1;
-                    that.values[prev].SSimage.parentElement.style.filter = 'alpha(opacity=' + 100 + ")";
+                    that.components[prev].element.style.visibility = "hidden";
+                    that.components[prev].element.style.opacity = 1;
+                    that.components[prev].element.style.filter = 'alpha(opacity=' + 100 + ")";
                 } else {
-                    that.values[prev].SSimage.parentElement.style.opacity = 1 - op;
-                    that.values[prev].SSimage.parentElement.style.filter = 'alpha(opacity=' + (1 - op) * 100 + ")";
-                    that.values[next].SSimage.parentElement.style.opacity = op;
-                    that.values[next].SSimage.parentElement.style.filter = 'alpha(opacity=' + op * 100 + ")";
+                    that.components[prev].element.style.opacity = 1 - op;
+                    that.components[prev].element.style.filter = 'alpha(opacity=' + (1 - op) * 100 + ")";
+                    that.components[next].element.style.opacity = op;
+                    that.components[next].element.style.filter = 'alpha(opacity=' + op * 100 + ")";
                     op += op * inc;
                 }
             }, step);
         },
         step: function step(dir, caller) {
-            var num = this.values.length;
+            var num = this.components.length;
             var next,
                 prev = this.current;
             if (dir === "next") {
@@ -2472,14 +2282,14 @@ require("./DisplayBase");
             }
             next = this.current;
 
-            if (this.fade === false || caller !== "play") {
-                this.values[prev].SSimage.parentElement.style.visibility = "hidden";
-                this.values[next].SSimage.parentElement.style.visibility = "visible";
+            if (this.fade === false) {
+                this.components[prev].element.style.visibility = "hidden";
+                this.components[next].element.style.visibility = "visible";
 
-                this.values[next].SSimage.parentElement.style.opacity = 1;
-                this.values[next].SSimage.parentElement.style.filter = "alpha(opacity=100)";
-                this.values[next].SSimage.parentElement.style.top = 0;
-                this.values[next].SSimage.parentElement.style.left = 0;
+                this.components[next].element.style.opacity = 1;
+                this.components[next].element.style.filter = "alpha(opacity=100)";
+                this.components[next].element.style.top = 0;
+                this.components[next].element.style.left = 0;
             } else {
                 this._crossFade(prev, next);
             }
@@ -2533,25 +2343,17 @@ require("./DisplayBase.js");
                 tablist;
 
 
-            this.element = document.createElement("div");
-            this.element.id = this.id;
-            this.element.classList.add("tab_container", "ui-tabs", "ui-widget-content", "ui-corner-all");
-            if (!this.tabs) {
-                this.tabs = [];
-            }
-
-
             tablist = document.createElement("ul");
             tablist.role = "tablist";
             tablist.classList.add("ui-tabs-nav", "ui-helper-reset", "ui-helper-clearfix", "ui-widget-header", "ui-corner-all", "tabs");
 
-            for (var i = 0; i < this.tabs.length; i++) {
-                tt[i] = this.tabs[i];
+            for (var i = 0; i < this.components.length; i++) {
+                tt[i] = this.components[i];
             }
-            this.tabs.length = 0;
+
             this.element.appendChild(tablist);
             for (var i = 0; i < tt.length; i++) {
-                this.addTab(tt[i], tablist);
+                this.addTab(i, tablist);
             }
             if (this.selected) {
                 this.select(this.selected);
@@ -2563,22 +2365,35 @@ require("./DisplayBase.js");
                 index,
                 s,
                 that = this;
-            t.label ? label = t.label : label = t.name;
+
             if (tablist === undefined) {
                 tablist = this.element.querySelector("ul.ui-tabs-nav");
             }
-            index = this.tabs.length;
+            if (Number.isInteger(t)) {
+                t = this.components[t];
+            } else {
+                index = this.components.length;
+                this.components[index] = t;
+            }
+            t.label ? label = t.label : label = t.name;
             t.element = document.createElement("li");
             t.element.classList.add("ui-state-default", "ui-corner-top");
+            t.element.setAttribute("name", t.name);
+
             if (t.class) {
-                t.element.classList.add(t.class);
+                if (Apoco.type["string"].check(t.class)) {
+                    t.element.classList.add(t.class);
+                } else {
+                    for (var i = 0; i < t.class.length; i++) {
+                        t.element.classList.add(t.class[i]);
+                    }
+                }
             }
             s = document.createElement("span");
             s.textContent = label;
             t.element.appendChild(s);
             t.parent = this;
-            this.tabs[index] = t;
-            this.tabs[index].parent = this;
+
             if (t.action) {
                 t.element.addEventListener("click", function (e) {
 
@@ -2591,52 +2406,11 @@ require("./DisplayBase.js");
             }
             tablist.appendChild(t.element);
         },
-        getTab: function getTab(name) {
-            if (name !== undefined) {
-                for (var i = 0; i < this.tabs.length; i++) {
-                    if (this.tabs[i].name === name) {
-                        return this.tabs[i];
-                    }
-                }
-                return null;
-            }
-            return this.tabs;
-        },
-        deleteAll: function deleteAll() {
-            for (var i = 0; i < this.tabs.length; i++) {
-                if (this.tabs[i].listen) {
-                    Apoco.unsubscribe(this.tabs[i]);
-                }
-                this.tabs[i].element.parentNode.removeChild(this.tabs[i].element);
-                this.tabs[i].element = null;
-            }
-            this.tabs.length = 0;
-        },
-        deleteTab: function deleteTab(name) {
-            var index = -1;
-            if (name === undefined) {
-                throw new Error("DisplayTabs: deleteTab - needs a name");
-            }
-            for (var i = 0; i < this.tabs.length; i++) {
-                if (this.tabs[i].name === name) {
-                    index = i;
-                    break;
-                }
-            }
-            if (index === -1) {
-                throw new Error("DisplayTabs: deleteTab - cannot find name " + name);
-            }
-            if (this.tabs[i].listen) {
-                Apoco.unsubscribe(this.tabs[i]);
-            }
-            this.tabs[index].element.parentNode.removeChild(this.tabs[index].element);
-            this.tabs[index].element = null;
-            this.tabs.splice(index, 1);
-        },
+
         update: function update(name) {
-            for (var i = 0; i < this.tabs.length; i++) {
-                if (this.tabs[i].name == name) {
-                    var p = this.tabs[i].name;
+            for (var i = 0; i < this.components.length; i++) {
+                if (this.components[i].name == name) {
+                    var p = this.components[i].name;
                     break;
                 }
             }
@@ -2653,20 +2427,20 @@ require("./DisplayBase.js");
             return null;
         },
         select: function select(name) {
-            for (var i = 0; i < this.tabs.length; i++) {
-                if (this.tabs[i].name == name) {
-                    this.selected = this.tabs[i];
-                    this.tabs[i].element.classList.add("selected", "ui-state-active", "ui-tabs-active");
-                    this.tabs[i].element.classList.remove("ui-state-default");
+            for (var i = 0; i < this.components.length; i++) {
+                if (this.components[i].name == name) {
+                    this.selected = this.components[i];
+                    this.components[i].element.classList.add("selected", "ui-state-active", "ui-tabs-active");
+                    this.components[i].element.classList.remove("ui-state-default");
                 } else {
-                    this.tabs[i].element.classList.add("ui-state-default");
-                    this.tabs[i].element.classList.remove("selected", "ui-state-active", "ui-tabs-active");
+                    this.components[i].element.classList.add("ui-state-default");
+                    this.components[i].element.classList.remove("selected", "ui-state-active", "ui-tabs-active");
                 }
             }
         },
         reset: function reset() {
-            for (var i = 0; i < this.tabs.length; i++) {
-                this.tabs[i].element.classList.remove("selected", "ui-state-active", "ui-tabs-active");
+            for (var i = 0; i < this.components.length; i++) {
+                this.components[i].element.classList.remove("selected", "ui-state-active", "ui-tabs-active");
             }
             this.selected = null;
         }
@@ -2741,6 +2515,17 @@ var Promise = require('es6-promise').Promise;
             throw new Error("Field: element is not a html node");
         }
         this.element.classList.add(this.type);
+
+        if (this.class) {
+            if (Apoco.type["string"].check(this.class)) {
+                this.element.classList.add(this.class);
+            } else {
+                for (var i = 0; i < this.class.length; i++) {
+                    this.element.classList.add(this.class[i]);
+                }
+            }
+        }
+
         this.element.setAttribute("name", this.name);
         if (this.title !== undefined) {
             this.element.title = this.title;
@@ -2893,7 +2678,9 @@ var Promise = require('es6-promise').Promise;
         if (this.precision) {
             this.input.setAttribute("pattern", "^[-+]?\d*\.?\/" + this.precision + "*$");
         }
-
+        if (this.placeholder) {
+            this.input.setAttribute("placeholder", this.placeholder);
+        }
         if (this.required === true) {
             this.input.required = true;
         }
@@ -3861,7 +3648,8 @@ var Promise = require('es6-promise').Promise;
     Apoco.Utils.extend(StringArrayField, _Field);
 
     var ImageArrayField = function ImageArrayField(d, element) {
-        var that = this;
+        var that = this,
+            rc = true;
         var new_values = [];
         this.promises = [];
         d.field = "ImageArrayField";
@@ -3888,8 +3676,11 @@ var Promise = require('es6-promise').Promise;
             this.input.setAttribute("multiple", "multiple");
             this.element.appendChild(this.input);
             this.input.addEventListener("change", function (e) {
-                that._getImageFileSelect(e);
+                rc = that._getImageFileSelect(e);
             });
+        }
+        if (!rc) {
+            Apoco.popup["dialog"]("Image Load Error", "One or more of the selected files is not a readable image");
         }
 
         if (this.value && this.value.length > 0) {
@@ -3926,7 +3717,8 @@ var Promise = require('es6-promise').Promise;
             return promise;
         },
         _getImageFileSelect: function _getImageFileSelect(evt) {
-            var that = this;
+            var that = this,
+                rc = true;
             var td = this.element.querySelector("div.thumbnails");
 
             evt.stopPropagation();
@@ -3934,6 +3726,8 @@ var Promise = require('es6-promise').Promise;
             for (var i = 0; i < evt.target.files.length; i++) {
                 if (evt.target.files[i].type.match('image.*')) {
                     files.push(evt.target.files[i]);
+                } else {
+                    rc = false;
                 }
             }
             var count = that.value.length;
@@ -3941,7 +3735,6 @@ var Promise = require('es6-promise').Promise;
             for (var i = count, j = 0; i < last; i++, j++) {
                 var reader = new FileReader();
                 reader.onload = function (f, num) {
-                    console.log("getImagefileselect  file is  %j", f);
                     return function (e) {
                         var p;
                         e.stopPropagation();
@@ -3954,6 +3747,7 @@ var Promise = require('es6-promise').Promise;
                 }(files[j], i);
                 reader.readAsDataURL(files[j]);
             }
+            return rc;
         },
         loadImages: function loadImages(values) {
             var i = 0,
@@ -4059,6 +3853,7 @@ var Promise = require('es6-promise').Promise;
         box.classList.add(this.type, "apoco_autocomplete");
         this.element.appendChild(box);
         var p = document.createElement("span");
+        p.classList.add("ui-icon", "ui-icon-magnify-left");
         p.innerHTML = "&#x26B2;";
         box.appendChild(p);
         this.input = document.createElement("input");
@@ -4475,7 +4270,7 @@ var Promise = require('es6-promise').Promise;
             if (settings.url === "") {
                 throw new Error("Apoco.REST Must have a url");
             }
-            if (data) {
+            if (data && settings.mimeType === 'application/json') {
                 data = JSON.stringify(data);
             }
             var promise = new Promise(function (resolve, reject) {
@@ -4493,7 +4288,6 @@ var Promise = require('es6-promise').Promise;
                             if (!request) {
                                 throw new Error("REST failed with no return from server");
                             }
-                            Apoco.display.statusCode[request.status](request.statusText + " " + request.responseText);
                         }
                     }
                 };
@@ -4527,6 +4321,8 @@ require("./Types.js");
 ;(function () {
 
     var _Node = function _Node(d, element) {
+        var p;
+
         if (!d) {
             throw new Error("Apoco: node, No params");
         }
@@ -4537,10 +4333,21 @@ require("./Types.js");
             this[k] = d[k];
         }
         _getNode[d.node](this);
-
-        if (this.class) {
-            this.element.classList.add(this.class);
+        if (element !== undefined) {
+            p = element;
+        } else {
+            p = this.element;
         }
+        if (this.class) {
+            if (Apoco.type["string"].check(this.class)) {
+                p.classList.add(this.class);
+            } else {
+                for (var i = 0; i < this.class.length; i++) {
+                    p.classList.add(this.class[i]);
+                }
+            }
+        }
+
         if (this.id) {
             this.element.id = this.id;
         }
@@ -4711,6 +4518,11 @@ require("./Types.js");
             }
             that.element = document.createElement("div");
             imm.onload = function () {
+                if (that.keepAspectRatio === false) {
+                    that.element.appendChild(imm);
+                    return;
+                }
+
                 if (that.width) {
                     this.width = that.width;
                 } else {
@@ -4983,6 +4795,9 @@ require("./Window");
                 }
             }
             var c = p.getChildren();
+            if (c === null) {
+                return;
+            }
             for (var i = 0; i < c.length; i++) {
                 if (c[i].hidden !== true) {
                     c[i].show();
@@ -5036,6 +4851,9 @@ require("./Window");
                 throw new Error("Panel.hide Cannot find panel " + k);
             }
             var c = p.getChildren();
+            if (c === null) {
+                return;
+            }
             for (var i = 0; i < c.length; i++) {
                 c[i].hide();
             }
@@ -6403,53 +6221,61 @@ String.prototype.trim = String.prototype.trim || function trim() {
             }
         },
 
-        draggable: function draggable(source, destination) {
+        draggable: function draggable(source, destination, handle) {
             if (destination === undefined) {
                 destination = document.body;
             }
-            source.classList.add("isdraggable");
+            if (handle === undefined) {
+                handle = source;
+            }
+            handle.classList.add("isdraggable");
 
             var allowDrag = function allowDrag(e) {
                 e.preventDefault();
                 return false;
             };
             var dragEnd = function dragEnd(e) {
-                e.stopPropagation();
+                if (e.currentTarget === e.target) {
+                    e.stopPropagation();
 
-                e.currentTarget.classList.remove("draggable");
-                destination.removeEventListener("drop", drop);
-                destination.removeEventListener("dragover", allowDrag);
+                    e.currentTarget.classList.remove("draggable");
+                    destination.removeEventListener("drop", drop);
+                    destination.removeEventListener("dragover", allowDrag);
+                }
             };
             var drop = function drop(e) {
-                console.log("drop is here");
                 e.preventDefault();
                 e.stopPropagation();
                 var data = e.dataTransfer.getData("text").split(",");
                 if (!source) {
                     throw new Error("source is undefined");
                 }
-                if (source.classList.contains("draggable")) {
+                if (handle.classList.contains("draggable")) {
                     source.style.left = e.clientX + parseInt(data[0], 10) + 'px';
                     source.style.top = e.clientY + parseInt(data[1], 10) + 'px';
-                    source.classList.remove("draggable");
+                    handle.classList.remove("draggable");
                 }
 
                 return false;
             };
 
             var dragStart = function dragStart(e) {
-                e.currentTarget.classList.add("draggable");
-                destination.addEventListener("dragover", allowDrag, false);
-                destination.addEventListener("drop", drop, false);
-                var style = window.getComputedStyle(e.target, null);
+                if (e.currentTarget === e.target) {
+                    e.stopPropagation();
 
-                e.dataTransfer.setData("text", parseInt(style.getPropertyValue("left"), 10) - e.clientX + ',' + (parseInt(style.getPropertyValue("top"), 10) - e.clientY));
+                    e.currentTarget.classList.add("draggable");
+                    destination.addEventListener("dragover", allowDrag, false);
+                    destination.addEventListener("drop", drop, false);
+                    var style = window.getComputedStyle(e.target, null);
+
+                    e.dataTransfer.setData("text", parseInt(style.getPropertyValue("left"), 10) - e.clientX + ',' + (parseInt(style.getPropertyValue("top"), 10) - e.clientY));
+                }
             };
 
-            if (source.draggable === false) {
-                source.draggable = true;
-                source.addEventListener("dragstart", dragStart, false);
-                source.addEventListener("dragend", dragEnd, false);
+            if (handle.draggable === false) {
+                handle.draggable = true;
+                handle.addEventListener("dragstart", dragStart, false);
+                handle.addEventListener("dragend", dragEnd, false);
             }
         },
         formatDate: function formatDate(d) {
@@ -7157,7 +6983,7 @@ exports.kMaxLength = kMaxLength()
 function typedArraySupport () {
   try {
     var arr = new Uint8Array(1)
-    arr.foo = function () { return 42 }
+    arr.__proto__ = {__proto__: Uint8Array.prototype, foo: function () { return 42 }}
     return arr.foo() === 42 && // typed array instances can be augmented
         typeof arr.subarray === 'function' && // chrome 9-10 lack `subarray`
         arr.subarray(1, 1).byteLength === 0 // ie10 has broken `subarray`
@@ -7270,6 +7096,8 @@ if (Buffer.TYPED_ARRAY_SUPPORT) {
 function assertSize (size) {
   if (typeof size !== 'number') {
     throw new TypeError('"size" argument must be a number')
+  } else if (size < 0) {
+    throw new RangeError('"size" argument must not be negative')
   }
 }
 
@@ -7301,7 +7129,7 @@ function allocUnsafe (that, size) {
   assertSize(size)
   that = createBuffer(that, size < 0 ? 0 : checked(size) | 0)
   if (!Buffer.TYPED_ARRAY_SUPPORT) {
-    for (var i = 0; i < size; i++) {
+    for (var i = 0; i < size; ++i) {
       that[i] = 0
     }
   }
@@ -7333,12 +7161,20 @@ function fromString (that, string, encoding) {
   var length = byteLength(string, encoding) | 0
   that = createBuffer(that, length)
 
-  that.write(string, encoding)
+  var actual = that.write(string, encoding)
+
+  if (actual !== length) {
+    // Writing a hex string, for example, that contains invalid characters will
+    // cause everything after the first invalid character to be ignored. (e.g.
+    // 'abxxcd' will be treated as 'ab')
+    that = that.slice(0, actual)
+  }
+
   return that
 }
 
 function fromArrayLike (that, array) {
-  var length = checked(array.length) | 0
+  var length = array.length < 0 ? 0 : checked(array.length) | 0
   that = createBuffer(that, length)
   for (var i = 0; i < length; i += 1) {
     that[i] = array[i] & 255
@@ -7357,7 +7193,9 @@ function fromArrayBuffer (that, array, byteOffset, length) {
     throw new RangeError('\'length\' is out of bounds')
   }
 
-  if (length === undefined) {
+  if (byteOffset === undefined && length === undefined) {
+    array = new Uint8Array(array)
+  } else if (length === undefined) {
     array = new Uint8Array(array, byteOffset)
   } else {
     array = new Uint8Array(array, byteOffset, length)
@@ -7405,7 +7243,7 @@ function fromObject (that, obj) {
 }
 
 function checked (length) {
-  // Note: cannot use `length < kMaxLength` here because that fails when
+  // Note: cannot use `length < kMaxLength()` here because that fails when
   // length is NaN (which is otherwise coerced to zero.)
   if (length >= kMaxLength()) {
     throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
@@ -7454,9 +7292,9 @@ Buffer.isEncoding = function isEncoding (encoding) {
     case 'utf8':
     case 'utf-8':
     case 'ascii':
+    case 'latin1':
     case 'binary':
     case 'base64':
-    case 'raw':
     case 'ucs2':
     case 'ucs-2':
     case 'utf16le':
@@ -7479,14 +7317,14 @@ Buffer.concat = function concat (list, length) {
   var i
   if (length === undefined) {
     length = 0
-    for (i = 0; i < list.length; i++) {
+    for (i = 0; i < list.length; ++i) {
       length += list[i].length
     }
   }
 
   var buffer = Buffer.allocUnsafe(length)
   var pos = 0
-  for (i = 0; i < list.length; i++) {
+  for (i = 0; i < list.length; ++i) {
     var buf = list[i]
     if (!Buffer.isBuffer(buf)) {
       throw new TypeError('"list" argument must be an Array of Buffers')
@@ -7517,10 +7355,8 @@ function byteLength (string, encoding) {
   for (;;) {
     switch (encoding) {
       case 'ascii':
+      case 'latin1':
       case 'binary':
-      // Deprecated
-      case 'raw':
-      case 'raws':
         return len
       case 'utf8':
       case 'utf-8':
@@ -7593,8 +7429,9 @@ function slowToString (encoding, start, end) {
       case 'ascii':
         return asciiSlice(this, start, end)
 
+      case 'latin1':
       case 'binary':
-        return binarySlice(this, start, end)
+        return latin1Slice(this, start, end)
 
       case 'base64':
         return base64Slice(this, start, end)
@@ -7642,6 +7479,20 @@ Buffer.prototype.swap32 = function swap32 () {
   for (var i = 0; i < len; i += 4) {
     swap(this, i, i + 3)
     swap(this, i + 1, i + 2)
+  }
+  return this
+}
+
+Buffer.prototype.swap64 = function swap64 () {
+  var len = this.length
+  if (len % 8 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 64-bits')
+  }
+  for (var i = 0; i < len; i += 8) {
+    swap(this, i, i + 7)
+    swap(this, i + 1, i + 6)
+    swap(this, i + 2, i + 5)
+    swap(this, i + 3, i + 4)
   }
   return this
 }
@@ -7728,7 +7579,73 @@ Buffer.prototype.compare = function compare (target, start, end, thisStart, this
   return 0
 }
 
-function arrayIndexOf (arr, val, byteOffset, encoding) {
+// Finds either the first index of `val` in `buffer` at offset >= `byteOffset`,
+// OR the last index of `val` in `buffer` at offset <= `byteOffset`.
+//
+// Arguments:
+// - buffer - a Buffer to search
+// - val - a string, Buffer, or number
+// - byteOffset - an index into `buffer`; will be clamped to an int32
+// - encoding - an optional encoding, relevant is val is a string
+// - dir - true for indexOf, false for lastIndexOf
+function bidirectionalIndexOf (buffer, val, byteOffset, encoding, dir) {
+  // Empty buffer means no match
+  if (buffer.length === 0) return -1
+
+  // Normalize byteOffset
+  if (typeof byteOffset === 'string') {
+    encoding = byteOffset
+    byteOffset = 0
+  } else if (byteOffset > 0x7fffffff) {
+    byteOffset = 0x7fffffff
+  } else if (byteOffset < -0x80000000) {
+    byteOffset = -0x80000000
+  }
+  byteOffset = +byteOffset  // Coerce to Number.
+  if (isNaN(byteOffset)) {
+    // byteOffset: it it's undefined, null, NaN, "foo", etc, search whole buffer
+    byteOffset = dir ? 0 : (buffer.length - 1)
+  }
+
+  // Normalize byteOffset: negative offsets start from the end of the buffer
+  if (byteOffset < 0) byteOffset = buffer.length + byteOffset
+  if (byteOffset >= buffer.length) {
+    if (dir) return -1
+    else byteOffset = buffer.length - 1
+  } else if (byteOffset < 0) {
+    if (dir) byteOffset = 0
+    else return -1
+  }
+
+  // Normalize val
+  if (typeof val === 'string') {
+    val = Buffer.from(val, encoding)
+  }
+
+  // Finally, search either indexOf (if dir is true) or lastIndexOf
+  if (Buffer.isBuffer(val)) {
+    // Special case: looking for empty string/buffer always fails
+    if (val.length === 0) {
+      return -1
+    }
+    return arrayIndexOf(buffer, val, byteOffset, encoding, dir)
+  } else if (typeof val === 'number') {
+    val = val & 0xFF // Search for a byte value [0-255]
+    if (Buffer.TYPED_ARRAY_SUPPORT &&
+        typeof Uint8Array.prototype.indexOf === 'function') {
+      if (dir) {
+        return Uint8Array.prototype.indexOf.call(buffer, val, byteOffset)
+      } else {
+        return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset)
+      }
+    }
+    return arrayIndexOf(buffer, [ val ], byteOffset, encoding, dir)
+  }
+
+  throw new TypeError('val must be string, number or Buffer')
+}
+
+function arrayIndexOf (arr, val, byteOffset, encoding, dir) {
   var indexSize = 1
   var arrLength = arr.length
   var valLength = val.length
@@ -7755,59 +7672,45 @@ function arrayIndexOf (arr, val, byteOffset, encoding) {
     }
   }
 
-  var foundIndex = -1
-  for (var i = 0; byteOffset + i < arrLength; i++) {
-    if (read(arr, byteOffset + i) === read(val, foundIndex === -1 ? 0 : i - foundIndex)) {
-      if (foundIndex === -1) foundIndex = i
-      if (i - foundIndex + 1 === valLength) return (byteOffset + foundIndex) * indexSize
-    } else {
-      if (foundIndex !== -1) i -= i - foundIndex
-      foundIndex = -1
+  var i
+  if (dir) {
+    var foundIndex = -1
+    for (i = byteOffset; i < arrLength; i++) {
+      if (read(arr, i) === read(val, foundIndex === -1 ? 0 : i - foundIndex)) {
+        if (foundIndex === -1) foundIndex = i
+        if (i - foundIndex + 1 === valLength) return foundIndex * indexSize
+      } else {
+        if (foundIndex !== -1) i -= i - foundIndex
+        foundIndex = -1
+      }
+    }
+  } else {
+    if (byteOffset + valLength > arrLength) byteOffset = arrLength - valLength
+    for (i = byteOffset; i >= 0; i--) {
+      var found = true
+      for (var j = 0; j < valLength; j++) {
+        if (read(arr, i + j) !== read(val, j)) {
+          found = false
+          break
+        }
+      }
+      if (found) return i
     }
   }
+
   return -1
-}
-
-Buffer.prototype.indexOf = function indexOf (val, byteOffset, encoding) {
-  if (typeof byteOffset === 'string') {
-    encoding = byteOffset
-    byteOffset = 0
-  } else if (byteOffset > 0x7fffffff) {
-    byteOffset = 0x7fffffff
-  } else if (byteOffset < -0x80000000) {
-    byteOffset = -0x80000000
-  }
-  byteOffset >>= 0
-
-  if (this.length === 0) return -1
-  if (byteOffset >= this.length) return -1
-
-  // Negative offsets start from the end of the buffer
-  if (byteOffset < 0) byteOffset = Math.max(this.length + byteOffset, 0)
-
-  if (typeof val === 'string') {
-    val = Buffer.from(val, encoding)
-  }
-
-  if (Buffer.isBuffer(val)) {
-    // special case: looking for empty string/buffer always fails
-    if (val.length === 0) {
-      return -1
-    }
-    return arrayIndexOf(this, val, byteOffset, encoding)
-  }
-  if (typeof val === 'number') {
-    if (Buffer.TYPED_ARRAY_SUPPORT && Uint8Array.prototype.indexOf === 'function') {
-      return Uint8Array.prototype.indexOf.call(this, val, byteOffset)
-    }
-    return arrayIndexOf(this, [ val ], byteOffset, encoding)
-  }
-
-  throw new TypeError('val must be string, number or Buffer')
 }
 
 Buffer.prototype.includes = function includes (val, byteOffset, encoding) {
   return this.indexOf(val, byteOffset, encoding) !== -1
+}
+
+Buffer.prototype.indexOf = function indexOf (val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, true)
+}
+
+Buffer.prototype.lastIndexOf = function lastIndexOf (val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, false)
 }
 
 function hexWrite (buf, string, offset, length) {
@@ -7824,12 +7727,12 @@ function hexWrite (buf, string, offset, length) {
 
   // must be an even number of digits
   var strLen = string.length
-  if (strLen % 2 !== 0) throw new Error('Invalid hex string')
+  if (strLen % 2 !== 0) throw new TypeError('Invalid hex string')
 
   if (length > strLen / 2) {
     length = strLen / 2
   }
-  for (var i = 0; i < length; i++) {
+  for (var i = 0; i < length; ++i) {
     var parsed = parseInt(string.substr(i * 2, 2), 16)
     if (isNaN(parsed)) return i
     buf[offset + i] = parsed
@@ -7845,7 +7748,7 @@ function asciiWrite (buf, string, offset, length) {
   return blitBuffer(asciiToBytes(string), buf, offset, length)
 }
 
-function binaryWrite (buf, string, offset, length) {
+function latin1Write (buf, string, offset, length) {
   return asciiWrite(buf, string, offset, length)
 }
 
@@ -7907,8 +7810,9 @@ Buffer.prototype.write = function write (string, offset, length, encoding) {
       case 'ascii':
         return asciiWrite(this, string, offset, length)
 
+      case 'latin1':
       case 'binary':
-        return binaryWrite(this, string, offset, length)
+        return latin1Write(this, string, offset, length)
 
       case 'base64':
         // Warning: maxLength not taken into account in base64Write
@@ -8043,17 +7947,17 @@ function asciiSlice (buf, start, end) {
   var ret = ''
   end = Math.min(buf.length, end)
 
-  for (var i = start; i < end; i++) {
+  for (var i = start; i < end; ++i) {
     ret += String.fromCharCode(buf[i] & 0x7F)
   }
   return ret
 }
 
-function binarySlice (buf, start, end) {
+function latin1Slice (buf, start, end) {
   var ret = ''
   end = Math.min(buf.length, end)
 
-  for (var i = start; i < end; i++) {
+  for (var i = start; i < end; ++i) {
     ret += String.fromCharCode(buf[i])
   }
   return ret
@@ -8066,7 +7970,7 @@ function hexSlice (buf, start, end) {
   if (!end || end < 0 || end > len) end = len
 
   var out = ''
-  for (var i = start; i < end; i++) {
+  for (var i = start; i < end; ++i) {
     out += toHex(buf[i])
   }
   return out
@@ -8109,7 +8013,7 @@ Buffer.prototype.slice = function slice (start, end) {
   } else {
     var sliceLen = end - start
     newBuf = new Buffer(sliceLen, undefined)
-    for (var i = 0; i < sliceLen; i++) {
+    for (var i = 0; i < sliceLen; ++i) {
       newBuf[i] = this[i + start]
     }
   }
@@ -8336,7 +8240,7 @@ Buffer.prototype.writeUInt8 = function writeUInt8 (value, offset, noAssert) {
 
 function objectWriteUInt16 (buf, value, offset, littleEndian) {
   if (value < 0) value = 0xffff + value + 1
-  for (var i = 0, j = Math.min(buf.length - offset, 2); i < j; i++) {
+  for (var i = 0, j = Math.min(buf.length - offset, 2); i < j; ++i) {
     buf[offset + i] = (value & (0xff << (8 * (littleEndian ? i : 1 - i)))) >>>
       (littleEndian ? i : 1 - i) * 8
   }
@@ -8370,7 +8274,7 @@ Buffer.prototype.writeUInt16BE = function writeUInt16BE (value, offset, noAssert
 
 function objectWriteUInt32 (buf, value, offset, littleEndian) {
   if (value < 0) value = 0xffffffff + value + 1
-  for (var i = 0, j = Math.min(buf.length - offset, 4); i < j; i++) {
+  for (var i = 0, j = Math.min(buf.length - offset, 4); i < j; ++i) {
     buf[offset + i] = (value >>> (littleEndian ? i : 3 - i) * 8) & 0xff
   }
 }
@@ -8585,12 +8489,12 @@ Buffer.prototype.copy = function copy (target, targetStart, start, end) {
 
   if (this === target && start < targetStart && targetStart < end) {
     // descending copy from end
-    for (i = len - 1; i >= 0; i--) {
+    for (i = len - 1; i >= 0; --i) {
       target[i + targetStart] = this[i + start]
     }
   } else if (len < 1000 || !Buffer.TYPED_ARRAY_SUPPORT) {
     // ascending copy from start
-    for (i = 0; i < len; i++) {
+    for (i = 0; i < len; ++i) {
       target[i + targetStart] = this[i + start]
     }
   } else {
@@ -8651,7 +8555,7 @@ Buffer.prototype.fill = function fill (val, start, end, encoding) {
 
   var i
   if (typeof val === 'number') {
-    for (i = start; i < end; i++) {
+    for (i = start; i < end; ++i) {
       this[i] = val
     }
   } else {
@@ -8659,7 +8563,7 @@ Buffer.prototype.fill = function fill (val, start, end, encoding) {
       ? val
       : utf8ToBytes(new Buffer(val, encoding).toString())
     var len = bytes.length
-    for (i = 0; i < end - start; i++) {
+    for (i = 0; i < end - start; ++i) {
       this[i + start] = bytes[i % len]
     }
   }
@@ -8701,7 +8605,7 @@ function utf8ToBytes (string, units) {
   var leadSurrogate = null
   var bytes = []
 
-  for (var i = 0; i < length; i++) {
+  for (var i = 0; i < length; ++i) {
     codePoint = string.charCodeAt(i)
 
     // is surrogate component
@@ -8776,7 +8680,7 @@ function utf8ToBytes (string, units) {
 
 function asciiToBytes (str) {
   var byteArray = []
-  for (var i = 0; i < str.length; i++) {
+  for (var i = 0; i < str.length; ++i) {
     // Node's code seems to be doing this and not & 0x7F..
     byteArray.push(str.charCodeAt(i) & 0xFF)
   }
@@ -8786,7 +8690,7 @@ function asciiToBytes (str) {
 function utf16leToBytes (str, units) {
   var c, hi, lo
   var byteArray = []
-  for (var i = 0; i < str.length; i++) {
+  for (var i = 0; i < str.length; ++i) {
     if ((units -= 2) < 0) break
 
     c = str.charCodeAt(i)
@@ -8804,7 +8708,7 @@ function base64ToBytes (str) {
 }
 
 function blitBuffer (src, dst, offset, length) {
-  for (var i = 0; i < length; i++) {
+  for (var i = 0; i < length; ++i) {
     if ((i + offset >= dst.length) || (i >= src.length)) break
     dst[i + offset] = src[i]
   }
@@ -8819,6 +8723,7 @@ function isnan (val) {
 },{"base64-js":22,"ieee754":23,"isarray":24}],22:[function(require,module,exports){
 'use strict'
 
+exports.byteLength = byteLength
 exports.toByteArray = toByteArray
 exports.fromByteArray = fromByteArray
 
@@ -8826,23 +8731,17 @@ var lookup = []
 var revLookup = []
 var Arr = typeof Uint8Array !== 'undefined' ? Uint8Array : Array
 
-function init () {
-  var code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-  for (var i = 0, len = code.length; i < len; ++i) {
-    lookup[i] = code[i]
-    revLookup[code.charCodeAt(i)] = i
-  }
-
-  revLookup['-'.charCodeAt(0)] = 62
-  revLookup['_'.charCodeAt(0)] = 63
+var code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+for (var i = 0, len = code.length; i < len; ++i) {
+  lookup[i] = code[i]
+  revLookup[code.charCodeAt(i)] = i
 }
 
-init()
+revLookup['-'.charCodeAt(0)] = 62
+revLookup['_'.charCodeAt(0)] = 63
 
-function toByteArray (b64) {
-  var i, j, l, tmp, placeHolders, arr
+function placeHoldersCount (b64) {
   var len = b64.length
-
   if (len % 4 > 0) {
     throw new Error('Invalid string. Length must be a multiple of 4')
   }
@@ -8852,9 +8751,19 @@ function toByteArray (b64) {
   // represent one byte
   // if there is only one, then the three characters before it represent 2 bytes
   // this is just a cheap hack to not do indexOf twice
-  placeHolders = b64[len - 2] === '=' ? 2 : b64[len - 1] === '=' ? 1 : 0
+  return b64[len - 2] === '=' ? 2 : b64[len - 1] === '=' ? 1 : 0
+}
 
+function byteLength (b64) {
   // base64 is 4/3 + up to two characters of the original data
+  return b64.length * 3 / 4 - placeHoldersCount(b64)
+}
+
+function toByteArray (b64) {
+  var i, j, l, tmp, placeHolders, arr
+  var len = b64.length
+  placeHolders = placeHoldersCount(b64)
+
   arr = new Arr(len * 3 / 4 - placeHolders)
 
   // if there are placeholders, only get up to the last complete 4 chars
@@ -9022,8 +8931,94 @@ module.exports = Array.isArray || function (arr) {
 
 },{}],25:[function(require,module,exports){
 // shim for using process in browser
-
 var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
 var queue = [];
 var draining = false;
 var currentQueue;
@@ -9048,7 +9043,7 @@ function drainQueue() {
     if (draining) {
         return;
     }
-    var timeout = setTimeout(cleanUpNextTick);
+    var timeout = runTimeout(cleanUpNextTick);
     draining = true;
 
     var len = queue.length;
@@ -9065,7 +9060,7 @@ function drainQueue() {
     }
     currentQueue = null;
     draining = false;
-    clearTimeout(timeout);
+    runClearTimeout(timeout);
 }
 
 process.nextTick = function (fun) {
@@ -9077,7 +9072,7 @@ process.nextTick = function (fun) {
     }
     queue.push(new Item(fun, args));
     if (queue.length === 1 && !draining) {
-        setTimeout(drainQueue, 0);
+        runTimeout(drainQueue);
     }
 };
 
