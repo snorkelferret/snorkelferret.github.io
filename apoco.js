@@ -3332,26 +3332,40 @@ var Promise = require('es6-promise').Promise;
             this.input[index].input = document.createElement("input");
             if (this.checkbox === true) {
                 this.input[index].input.type = "checkbox";
+                if (this.editable === false) {
+                    this.input[index].input.disabled = true;
+                }
             } else {
                 this.input[index].input.type = "radio";
+                if (this.editable === false) {
+                    if (this.value[index] === false) {
+                        this.input[index].input.disabled = true;
+                    }
+                }
             }
+            this.input[index].input.id = this.input[index].label;
             this.input[index].input.checked = this.value[index];
+
             l.appendChild(this.input[index].input);
-            p = document.createElement("p");
+            p = document.createElement("label");
+            p.setAttribute("for", this.input[index].label);
             p.textContent = this.input[index].label;
             l.appendChild(p);
-
             if (this.checkbox !== true) {
-                this.input[index].input.addEventListener("click", function (that, node) {
-                    return function (e) {
-                        e.stopPropagation();
-                        for (var i = 0; i < that.input.length; i++) {
-                            if (that.input[i].input !== node) {
-                                that.input[i].input.checked = false;
+                this.element.addEventListener("click", function (e) {
+                    var b;
+
+                    if (e.target.tagName === "INPUT") {
+                        b = e.currentTarget.getElementsByTagName('input');
+                        for (var i = 0; i < b.length; i++) {
+                            if (b[i] !== e.target) {
+                                b[i].checked = false;
                             }
                         }
-                    };
-                }(this, this.input[index].input));
+
+                        e.stopPropagation();
+                    }
+                }, false);
             }
             return true;
         },
@@ -3994,6 +4008,7 @@ var Promise = require('es6-promise').Promise;
 
     Apoco.Utils.extend(AutoCompleteField, _Field);
 
+
     Apoco.field = {
         exists: function exists(field) {
             if (this[field]) {
@@ -4235,6 +4250,7 @@ var Promise = require('es6-promise').Promise;
                 if (e.code !== 1000) {
                     Apoco.popup.error("webSocket abnormal termination", "Exiting with code" + e.code);
                 }
+                Apoco.webSocket = null;
             };
             Apoco.webSocket.onmessage = function (e) {
                 if (!e.data) {
@@ -6017,6 +6033,7 @@ var Apoco = require('./declare').Apoco;
 })();
 
 },{"./declare":19}],16:[function(require,module,exports){
+(function (global){
 'use strict';
 
 var Apoco = require('./declare').Apoco;
@@ -6387,10 +6404,34 @@ String.prototype.trim = String.prototype.trim || function trim() {
             } else {
                 return false;
             }
+        },
+        history: {
+            init: function init(func) {
+                global.window.addEventListener('popstate', function (event) {
+                    if (event.state && event.state.name) {
+                        func(event.state.name);
+                    } else {
+                        func(null);
+                    }
+                }, false);
+            },
+            currentState: function currentState() {
+                return history.state;
+            },
+            replace: function replace(c_obj) {
+                history.replaceState(c_obj, c_obj.title, c_obj.url);
+            },
+            push: function push(name) {
+                var c_obj = {};
+                c_obj.name = name;
+                var p = "index.html?" + name;
+                history.pushState(c_obj, p, p);
+            }
         }
     };
 })();
 
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./declare":19,"clone-deep":26}],17:[function(require,module,exports){
 "use strict";
 
