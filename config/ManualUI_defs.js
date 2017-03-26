@@ -10,8 +10,8 @@ var UI={};
 
     var history_update=function(name){
         var a;
-        console.log("location: " + document.location + ", name: " + name);
-        console.log("history update going to tab " + name);
+       // console.log("location: " + document.location + ", name: " + name);
+       // console.log("history update going to tab " + name);
        
         if(!name){
             console.log("state name is wrong or null" + name);
@@ -103,7 +103,7 @@ var UI={};
     function mkArrays(){
         var thing;
         for(var k in HThings){
-           // console.log("k is " + k);
+          //  console.log("k is " + k);
             switch(k){
             case "Fields":
                 thing=Apoco.field;
@@ -149,7 +149,7 @@ var UI={};
                         
                    }
                    else if(k==="Displays"){
-                    //   console.log("got display " + n);
+                   //   console.log("got display " + n);
                        if(n.indexOf("Methods")<= -1){
                            HThings[k].push(n);
                        }
@@ -181,18 +181,28 @@ var UI={};
         field_options: function(){
             var that=this;
             return{
-            required:{name:{type: "string",descriptions:["tag used in Field methods"]}},
-            common: {required:{type:"boolean",default: false,descriptions:["Is the cell allowed to be blank"]},
-                     editable:{type:"boolean",default:true,descriptions:["If false user input is disabled"]},
-                     label:{type: "string",default: undefined,descriptions:["added next to the input field"]},
-                     title:{type: "string",default: undefined,descriptions:["add a tooltip"]}
-                    },
-            IO:{
-                action:{type:"function",default: undefined,descriptions:["Function run after field has beenn created <br>","e.g <code>action:function(that){ alert('hullo');}</code>"]},
-                listen:{type:"objectArray",default:undefined ,descriptions:["e.g <code> listen:[{name:'some_name',action:function(that,data){ alert('got data ' + data);}}]</code>"]},
-                publish:{type: "objectArray",default: undefined,descriptions:["array can contain either an action function or static data e.g"," <code> publish:[{name:'some_name', <br> " + mk_spaces(4) + "action:function(that,name){ <br> " + mk_spaces(8) + " var data={user:'me',password:'you'}; <br> "+ mk_spaces(8) + "Apoco.IO.dispatch(name,data);}<br> " + mk_spaces(4) + "}];</code>","or","<code> publish:[{name:'some_name',data: my_data}]; </code> "]}
-            },
-            input: { options:{type:{type:"string",
+                required:{name:{type: "string",descriptions:["tag used in Field methods"]}},
+                common: {required:{type:"boolean",default: false,descriptions:["Is the cell allowed to be blank"]},
+                         editable:{type:"boolean",default:true,descriptions:["If false user input is disabled"]},
+                         label:{type: "string",default: undefined,descriptions:["added next to the input field"]},
+                         title:{type: "string",default: undefined,descriptions:["add a tooltip"]}
+                        },
+                IO:{
+                    action:{type:"function",default: undefined,descriptions:["Function run after field has beenn created <br>","e.g <code>action:function(that){ alert('hullo');}</code>"]},
+                    listen:{type:"objectArray",default:undefined ,descriptions:["e.g <code> listen:[{name:'some_name',action:function(that,data){ alert('got data ' + data);}}]</code>"]},
+                    publish:{type: "objectArray",default: undefined,descriptions:["array can contain either an action function or static data e.g"," <code> publish:[{name:'some_name', <br> " + mk_spaces(4) + "action:function(that,name){ <br> " + mk_spaces(8) + " var data={user:'me',password:'you'}; <br> "+ mk_spaces(8) + "Apoco.IO.dispatch(name,data);}<br> " + mk_spaces(4) + "}];</code>","or","<code> publish:[{name:'some_name',data: my_data}]; </code> "]}
+                },
+                static:{options:{type:{type:"string",
+                                       default: "string",
+                                       params:"any",
+                                       descriptions:["any type at all"]},
+                                 value:{type: "any",default:"undefined",
+                                        params: "any",
+                                        descriptions:["single value or an array"]}
+                                },
+                        descriptions:["For fields that are not editable but need to have field methods"]
+                       },
+                input: { options:{type:{type:"string",
                                     default:"string",
                                     params:that.get_types("input"),
                                     dependsOn:{float:{min:"default: undefined",
@@ -208,12 +218,12 @@ var UI={};
                                                         }
                                               }
                                    },
-                              value:{type: "any",default: undefined,
+                                  value:{type: "any",default: undefined,
                                      params:that.get_types("input"),
                                      descriptions:[""]},
-                              placeholder:{type: "string",default:"none",params: "string",descriptions:["placeholder text for field"]}
-                             },
-                     descriptions:[""]
+                                  placeholder:{type: "string",default:"none",params: "string",descriptions:["placeholder text for field"]}
+                                 },
+                         descriptions:[""]
                    },
             select:{ required:{ options:{type:"stringArray",
                                          default: undefined,
@@ -412,6 +422,7 @@ var UI={};
                 autoComplete:["options"],
                // static:["value"],
                 stringArray:["value"],
+                static:["type","value"],
                 float:["value"],
                 numberArray:["value","type"],
                 input:["value","type"],
@@ -1077,8 +1088,8 @@ var UI={};
                   options:[{label:"buttons",descriptions:["an array of button objects","example","<code> buttons: [{name: 'string',text:'string',action: function(that){ //some code }}]</code>"]},{label:"hidden",descriptions:["type:boolean","default: false","add the node to the DOM"]},
                            {label:"draggable",descriptions:["type: boolean","default: true","if true the form is detached and can be dragged around the browser window"]},
                            {label: "label",description: "type: string"}]},
-            grid:{required:[{label: "cols",descriptions:["type: objectArray","array of fields based on type","example","<code>cols:[{name:'colname1',type:'string',editable:false},{name:'colname2',type:'float',required:true,resizable:true,precision:2,step:0.1}]<code>"]},
-                            {label:"rows",descriptions:["type:objectArray","if the cols were defined as above then the rows would be","<code> rows:[{colname1:'some_string',colname2:23.53},{colname1:'another_string',colname2:34.66}]"]}],
+            grid:{required:[{label: "cols",descriptions:["type: objectArray","array of fields based on type or the field may be specified directly","example","<code>cols:[{name:'colname1',type:'string',editable:false},{name:'colname2',type:'float',required:true,resizable:true,precision:2,step:0.1},{field:'select',name:'choose',options:['one','two','three']}]<code>"]},
+                            {label:"rows",descriptions:["type:objectArray","if the cols were defined as above then the rows would be","<code> rows:[{colname1:'some_string',colname2:23.53,choose:'one'},{colname1:'another_string',colname2:34.66,choose:'three'}]"]}],
                   options:[
                       {label:"userSortable",descriptions:["type: boolean","can the user sort the cols","userSortable and sortOrder are mutually exclusive"]},
                       {label:"sortOrder",descriptions:["type:stringArray","column names to sort the grid rows","example","<code>sortOrder:['colname1','colname2']<code","sort the rows first by colname1 and then colname2"]},
@@ -1245,7 +1256,6 @@ var UI={};
             select: ["<code> my_display.select(name)</code>","params: name(string)","return: none"],
             getJSON: ["<code> var js=my_display.getJSON();</code>"],
             resetInvalid:["<code>my_display.resetInvalid();</code>","params: none","return: none","reset all fields to last known good value"],
-            submit: [],
             play:["<code>my_display.play();</code>","start playback"],
             step:["<code>my_display.step(dir);</code>","params: dir (string) either 'next' or 'prev'","step forward one frame"],
             showFullscreen:["<code>my_display.showFullscreen();</code>","params: none","return: none","toggles fullscreen mode, i.e called once makes the display fullscreen called again it pops it back into the DOM tree"],
@@ -1286,12 +1296,12 @@ var UI={};
         };
         var items=[];
         for(var i=0;i<HDisplays.length;i++){
-           //console.log("mkFieldMethods making " + HDisplays[i]);
+           // console.log("mkFieldMethods making " + HDisplays[i]);
             var k={};
             items[i]=[];
             for(var j in Methods[HDisplays[i]]){
                 var m=Methods[HDisplays[i]][j];
-             //   console.log("Methods " + m);
+                //console.log("Methods " + m);
                 items[i].push({label:m,
                                descriptions:display_methods_list[m]});
             }
@@ -1307,12 +1317,12 @@ var UI={};
                            value: "var v=window." + HDisplays[i]+"_obj.getKey();"},
                           {name: "doit", node: "button", text: "Go",
                            action: function(that){
-                               //                  console.log("button action is here");
+                                               console.log("button action is here");
                                var f=that.parent.getChild("Input_params");
                                if(!f){
                                    throw new Error("can't get input params");
                                }
-                              // console.log("text area is " + f.getValue());
+                              console.log("text area is " + f.getValue());
                                globalEval(f.getValue());
                                var nf=that.parent.getChild("Result");
                                try{
@@ -1691,12 +1701,12 @@ var UI={};
                 k.components.push({node:'heading',size:'h5',text:'Live Example'});
                 k.components.push({field:'textArea',name:'input_params',value: items[HUtils[i]].cmd});
                 k.components.push({node: "button",name: 'Go',action:function(that){
-                    var f=that.parent.getField('input_params');
+                    var f=that.parent.getChild('input_params');
                     if(!f){
                         throw new Error("can't get input params");
                     }
                     globalEval(f.getValue());
-                    var p=that.parent.getNode('Result');
+                    var p=that.parent.getChild('Result');
                     if(Apoco.type['function'].check(v)){
                         p.setText(v);
                     }
@@ -1714,7 +1724,7 @@ var UI={};
 
     var select_tabs=function (that,pop){
         var name=that.name;
-        console.log("select_tabs: trying to show " + name);
+      //  console.log("select_tabs: trying to show " + name);
         if(that.parent.selected){
             Apoco.Panel.hide(that.parent.selected.name);
         }
@@ -1864,7 +1874,6 @@ var UI={};
                              DOM: "Main",
                              id: "Tabs",
                              selected: "About",
-                             class:["ui-tabs","ui-widget-content","ui-corner-all"],
                              action: function(that){
                                  for(var i=0; i<that.components.length;i++){
                                      that.components[i].action=select_tabs;
@@ -1889,15 +1898,12 @@ var UI={};
                   components:[ {display:"menu",
                                 DOM: "left",
                                 id: "FieldsMenu",
-                                class:["ui-widget-content","ui-corner-all"],                
-                            //    selected: "StaticField",
                                 heading:"Field Types",
                                 components: mkMenu(HThings.Fields)
                                },
                                { display: "fieldset",
                                  DOM: "right",
                                  id: "Blurb",
-                                 class:["ui-widget-content","ui-corner-all"],
                                  components:[{node:"heading", size: "h2",text: "Apoco Fields"},
                                              {node:"paragraph", text:"Fields.js <br> depends on Utils.js,Sort.js,Types.js, datepicker.js"} ,
                                              {node: "heading", size: "h3", text: "Usage" },
@@ -2017,7 +2023,6 @@ var UI={};
                        { display: "fieldset",
                          id:"Blurb",
                          DOM: "right",
-                         class:["ui-widget-content","ui-corner-all"],
                          components:[
                              {node: "heading",size:"h2",text: "Apoco Displays"},
                              {node:"paragraph", text:"DisplayMenu.js DisplayFieldset.js DisplayForm.js DisplayTabs.js DisplaySlideshow.js DisplayGrid.js"} ,
@@ -2048,7 +2053,6 @@ var UI={};
                       { display: "fieldset",
                         id:"Blurb",
                         DOM: "right",
-                        class:["ui-widget-content","ui-corner-all"],
                         components:[
                              {node: "heading",size:"h2",text: "Apoco Windows"},
                              {node:"paragraph", text:"Window.js"} ,
@@ -2181,7 +2185,6 @@ var UI={};
                     { display: "fieldset",
                       id:"Blurb",
                       DOM: "right",
-                      class:["ui-widget-content","ui-corner-all"],
                       components:[
                           {node: "heading",size:"h2",text: "Apoco Popups"},
                           {node: "paragraph",text: "Popups.js"},
