@@ -448,10 +448,6 @@ require("./Nodes.js");
                 }
             }
             return valid;
-        },
-        submit: function submit(url) {
-            var j = this.getJSON();
-            Apoco.IO.REST("POST", j, url);
         }
     };
 
@@ -510,7 +506,7 @@ require("./DisplayFieldset");
             this.element.innerHeight = this.height;
             this.element.innerWidth = this.width;
             header = document.createElement("div");
-            header.classList.add("form_header", "ui-state-default", "ui-widget-header", "ui-corner-all");
+            header.classList.add("form_header");
             this.element.appendChild(header);
             if (this.draggable !== false) {
                 this.draggable = Apoco.Utils.draggable(this.element, undefined, header);
@@ -527,8 +523,7 @@ require("./DisplayFieldset");
             }
             header.appendChild(h);
             var close = document.createElement("span");
-            close.innerHTML = "&#x2715;";
-            close.classList.add("ui-icon", "ui-icon-close");
+            close.classList.add("close");
             header.appendChild(close);
             var c = function c(e) {
                 e.stopPropagation();
@@ -543,14 +538,14 @@ require("./DisplayFieldset");
             if (this.components) {
                 for (var i = 0; i < this.components.length; i++) {
                     lp = document.createElement("li");
-                    console.log("FORM CREATES ELEMENT " + lp);
+
                     this.addChild(i, lp, fp);
                 }
             }
 
             if (this.buttons) {
                 var button_container = document.createElement("div");
-                button_container.classList.add("form_button_container", "ui-widget-content");
+                button_container.classList.add("form_button_container");
                 this.element.appendChild(button_container);
                 for (var i = 0; i < this.buttons.length; i++) {
                     this.buttons[i].node = "button";
@@ -576,7 +571,7 @@ require("./DisplayFieldset");
             }
             if (index === 0) {
                 r = document.createElement("div");
-                r.classList.add("form_button_container", "ui-widget-content");
+                r.classList.add("form_button_container");
                 this.element.appendChild(r);
             } else {
                 r = this.element.querySelector("div.form_button_container");
@@ -709,8 +704,8 @@ require("./Sort.js");
                     var cc = $("<div></div>").css({ 'width': '100px', 'height': '100px', 'background': '#101010' });
 
                     d.append(cc);
-                    var ok = $("<button class='ui-button ui-state-default ui-corner-all ui-button-text-only '> <span class='ui-button-text'>  OK  </span> </button>");
-                    var cancel = $("<button class='ui-button ui-state-default ui-corner-all ui-button-text-only '> <span class='ui-button-text'> Cancel </span> </button>");
+                    var ok = $("<button class='button'> <span class='button_text'>  OK  </span> </button>");
+                    var cancel = $("<button class='button'> <span class='button_text'> Cancel </span> </button>");
                     d.append(ok);
                     d.append(cancel);
                     $(this).parent().append(d);
@@ -758,7 +753,7 @@ require("./Sort.js");
                         cell.setValue(val);
                     }
 
-                    that.selection_list[i].classList.remove("ui-selected");
+                    that.selection_list[i].classList.remove("selected");
                 }
             } else {
                 that.cellEdit.setValue(val);
@@ -813,11 +808,10 @@ require("./Sort.js");
 
         if (that.cellEdit.popup) {
             console.log("popup is here for " + n);
-            var d = $("<div class='popup' id='grid_popup'> </div>");
+
             that.field = Apoco.field[n](that.cellEdit.data["apoco"], d);
             that.cellEdit.getEelement().append(d);
-            var ok = $("<button class='ui-button  ui-state-default ui-corner-all ui-button-text-only '> <span class='ui-button-text'>  OK  </span> </button>");
-            var cancel = $("<button class='ui-button  ui-state-default ui-corner-all ui-button-text-only '> <span class='ui-button-text'> Cancel </span> </button>");
+
             d.append(ok);
             d.append(cancel);
             that.field.element.focus();
@@ -1043,7 +1037,7 @@ require("./Sort.js");
             if (name !== undefined) {
                 div.id = name;
                 h = document.createElement("h4");
-                h.classList.add("ui-widget-header");
+
                 h.textContent = name;
                 div.appendChild(h);
             }
@@ -1065,16 +1059,20 @@ require("./Sort.js");
                 t,
                 rows;
             var was_hidden = this.isHidden();
+            var check_opts = function check_opts(c) {
+                if (!c.name) {
+                    throw new Error("column must have a name");
+                }
+                if (!c.type && !c.field) {
+                    throw new Error("displayGrid: column must have type or field");
+                }
+            };
             if (Apoco.type["integer"].check(col)) {
                 index = col;
                 col = this.cols[index];
-                if (!col.name || !col.type) {
-                    throw new Error("column must have type and name");
-                }
+                check_opts(col);
             } else {
-                if (!col.name || !col.type) {
-                    throw new Error("column must have type and name");
-                }
+                check_opts(col);
                 index = this.getColIndex(col.name);
                 if (index === null) {
                     index = this.cols.length;
@@ -1088,10 +1086,6 @@ require("./Sort.js");
                 }
             }
 
-            col.options = {};
-            for (var k in col) {
-                col.options[k] = col[k];
-            }
             if (this.grids) {
                 for (var i = 0; i < this.grids.length; i++) {
                     rows = this.grids[i].rows;
@@ -1105,13 +1099,13 @@ require("./Sort.js");
                     }
                 }
             }
-            if (this.cols[index].display !== false) {
+            if (this.cols[index].hidden !== true) {
                 var label = this.cols[index].label ? this.cols[i].label : this.cols[index].name;
                 var h = document.createElement("div");
-                var s = document.createElement("soan");
+                var s = document.createElement("span");
                 h.appendChild(s);
-                h.classList.add(this.cols[index].type);
-                h.type = this.cols[index].type;
+                this.cols[index].type ? h.classList.add(this.cols[index].type) : h.classList.add(this.cols[index].field);
+
                 s.textContent = label;
                 this.cols[index].element = h;
                 this.cols[index].sortable = Apoco.isSortable(this.cols[index].type);
@@ -1119,9 +1113,9 @@ require("./Sort.js");
                     var dec = document.createElement("div");
                     dec.classList.add("arrows");
                     var up = document.createElement("span");
-                    up.classList.add("up", "ui-icon", "ui-icon-triangle-1-n");
+                    up.classList.add("up");
                     var down = document.createElement("span");
-                    down.classList.add("down", "ui-icon", "ui-icon-triangle-1-n");
+                    down.classList.add("down");
                     dec.appendChild(up);
                     dec.appendChild(down);
                     h.appendChild(dec);
@@ -1142,15 +1136,6 @@ require("./Sort.js");
                             sort_callback(col_num, that, "down");
                         };
                     }(index, that), false);
-
-                    h.addEventListener("mouseover", function (e) {
-                        e.stopPropagation();
-                        e.target.classList.add('ui-state-hover');
-                    }, false);
-                    h.addEventListener("mouseout", function (e) {
-                        e.stopPropagation();
-                        e.target.classList.remove('ui-state-hover');
-                    }, false);
                 }
                 this.colElement.appendChild(h);
                 if (this.cols[index].hidden) {
@@ -1260,8 +1245,8 @@ require("./Sort.js");
                 type,
                 settings = {};
 
-            for (var k in col.options) {
-                settings[k] = col.options[k];
+            for (var k in col) {
+                settings[k] = col[k];
             }
             if (row[col.name] === undefined) {
                 if (this.required === true) {
@@ -1273,17 +1258,19 @@ require("./Sort.js");
 
             settings.value = row[col.name];
             c = document.createElement("td");
-            c.className = col.type;
+            col.type ? c.classList.add(col.type) : c.classList.add(col.field);
+            if (col.editable === false) {
+                row[col.name] = Apoco.field["static"](settings, c);
+            } else if (col.field !== undefined) {
+                row[col.name] = Apoco.field[col.field](settings, c);
+            } else {
+                row[col.name] = Apoco.field[Apoco.type[col.type].field](settings, c);
+            }
 
-            row[col.name] = Apoco.field[Apoco.type[col.type].field](settings, c);
-            if (col.display !== false) {
+            if (col.hidden !== true) {
                 r.appendChild(row[col.name].element);
-
                 row[col.name].element.data = {};
                 row[col.name].element.data.apoco = { name: col.name, "context": row[col.name], "type": col.type };
-            }
-            if (col.hidden) {
-                row[col.name].element.visibility = "hidden";
             }
         },
         addRow: function addRow(row_data) {
@@ -1337,9 +1324,7 @@ require("./Sort.js");
 
                 if (closest.dir === "after") {
                     closest.index++;
-
                     e = grid.rows[closest.index][t].element;
-
                     e.parentNode.insertBefore(e, r.nextSibling);
                     grid.rows.splice(closest.index, 0, row_data);
                 } else {
@@ -1377,7 +1362,7 @@ require("./Sort.js");
                 if (!parent) {
                     parent = row[this.cols[i].name].getElement().parentNode;
                 }
-                if (this.cols[i].display !== false) {
+                if (this.cols[i].hidden !== true) {
                     el = row[this.cols[i].name].getElement();
                     el.parentNode.removeChild(el);
                     el = null;
@@ -1407,6 +1392,7 @@ require("./Sort.js");
             }
 
             for (var i = 0; i < grid.length; i++) {
+                console.log("searching grid ", grid[i].name);
                 if (grid[i].sorted) {
                     if (this.closest) {
                         if (this.sortOrder === undefined) {
@@ -1421,11 +1407,6 @@ require("./Sort.js");
                         for (var j = 0; j < sortOrder.length; j++) {
                             if (key[sortOrder[j]] === undefined || key[sortOrder[j]] === null) {
                                 throw new Error("getRow: key is not unique needs " + this.sortOrder[j]);
-                            }
-                        }
-                        for (var j = 0; j < grid[i].rows.length; j++) {
-                            for (k = 0; k < this.cols.length; k++) {
-                                var v = this.cols[k].name;
                             }
                         }
                     }
@@ -1475,7 +1456,7 @@ require("./Sort.js");
                 for (var k in cell_data) {
                     row[k].setValue(cell_data[k]);
                     var cl = "cell_updated";
-                    if (row[k].display !== false) {
+                    if (row[k].hidden !== true) {
                         cell = row[k].getElement();
                         if (cell.classList.contains(cl)) {
                             cell.classList.remove(cl);
@@ -1512,28 +1493,28 @@ require("./Sort.js");
             }
             return this.grids;
         },
+        deleteChild: function deleteChild() {},
+        deleteChildren: function deleteChildren() {
+            this.deleteAll();
+        },
         deleteAll: function deleteAll() {
-            var el, parent, row;
+            var el, row;
             if (this.grids) {
                 for (var i = 0; i < this.grids.length; i++) {
                     for (var j = 0; j < this.grids[i].rows.length; j++) {
                         row = this.grids[i].rows[j];
                         for (var k = 0; k < this.cols.length; k++) {
                             el = row[this.cols[k].name].element;
-                            if (this.cols[k].display !== false) {
-                                if (k === 0) {
-                                    parent = el.parentNode;
-                                }
-                                parent.removeChild(el);
+
+                            if (el && el.parentNode) {
+                                el.parentNode.removeChild(el);
                             }
-                        }
-                        if (parent) {
-                            parent.parentNode.removeChild(parent);
                         }
                     }
                     this.grids[i].rows.length = 0;
                     this.grids[i].element.parentNode.removeChild(this.grids[i].element);
                 }
+                this.cols.length = 0;
                 this.grids.length = 0;
             }
         },
@@ -1616,50 +1597,8 @@ require("./Sort.js");
                 }
             }
             return n;
-        },
-        submit: function submit(row, field_name) {
-            var cols, rk, rv;
-
-            var jsq = this.submitDefaults;
-            jsq.type = "POST";
-
-            if (row && field_name) {
-                if (this.uniqueKey) {
-                    rk = row[this.uniqueKey].name.toString();
-                    rv = row[field_name].name.toString();
-                    jsq.data.push({ rk: row[this.uniqueKey].getValue(),
-                        rv: row[field_name].getValue() });
-                } else {
-                    for (var i = 0; i < row.length; i++) {
-                        rk = row[i].name;
-                        jsq.data.push({ rk: row[i].getValue() });
-                    }
-                    return;
-                }
-            } else {}
-            if (this.DEBUG) console.log("jsq is " + JSON.stringify(jsq));
-
-            var submit_promise = Apoco.ajax.jsq(jsq, { url: "/JSQ/cbm",
-                type: "POST",
-                dataType: 'json',
-                contentType: "application/json" });
-
-            submit_promise.done(function (that, p) {
-                return function (jq, textStatus) {
-                    if (this.DEBUG) console.log("Form.submit: promise success");
-                    if (textStatus === "success") {
-                        Apoco.display.dialog(that.options.action + " of " + that.template, p.name + " has been successfully committed to the Database");
-                    } else {
-                        if (this.DEBUG) console.log("Form.submit: deferred-reject");
-                    }
-                };
-            }(this, jsq.properties));
-
-            submit_promise.fail(function (jq, textStatus) {
-                var msg = "callback Fail- status  " + jq.status + "  " + jq.statusText + " " + jq.responseText;
-                Apoco.display.dialog("Update Failed", msg);
-            });
         }
+
     };
 
     Apoco.Utils.extend(ApocoMakeGrid, Apoco._DisplayBase);
@@ -1721,7 +1660,7 @@ require("./DisplayBase");
 
             u = document.createElement("ul");
             u.role = "menubar";
-            u.classList.add("apoco_menu_list", "ui-menu");
+            u.classList.add("apoco_menu_list");
             this.element.appendChild(u);
 
             for (var i = 0; i < this.components.length; i++) {
@@ -1752,7 +1691,7 @@ require("./DisplayBase");
             this.selected = null;
             var p = this.element.getElementsByTagName("li");
             for (var i = 0; i < p.length; i++) {
-                p[i].classList.remove("selected", "ui-state-active");
+                p[i].classList.remove("selected");
             }
         },
         addMenu: function addMenu(index, parent_element) {
@@ -1786,7 +1725,6 @@ require("./DisplayBase");
                 d.element.appendChild(s);
                 parent_element.appendChild(d.element);
             } else {
-                d.element.classList.add("ui-menu-item");
                 d.element.setAttribute("role", "menuitem");
                 d.element.textContent = l;
 
@@ -1820,9 +1758,9 @@ require("./DisplayBase");
 
                     c = this.selected.element.parentNode.children;
                     for (var j = 0; j < c.length; j++) {
-                        c[j].classList.remove("selected", "ui-state-active");
+                        c[j].classList.remove("selected");
                     }
-                    this.selected.element.classList.add("selected", "ui-state-active");
+                    this.selected.element.classList.add("selected");
                     return;
                 }
             }
@@ -1916,7 +1854,7 @@ require("./DisplayBase");
                 } else {
                     if (that.autoplay) {
                         if (that.controls) {
-                            that.element.querySelector("span.ui-icon-play").click();
+                            that.element.querySelector(".play").click();
                         } else {
                             that.play();
                         }
@@ -1955,7 +1893,7 @@ require("./DisplayBase");
         _controls: function _controls() {
             var that = this;
             var d, u, l, s, sibs;
-            var icons = [{ class: "ui-icon-seek-prev", action: "step", params: "prev" }, { class: "ui-icon-play", action: "play" }, { class: "ui-icon-pause", action: "stop" }, { class: "ui-icon-seek-next", action: "step", params: "next" }, { class: "ui-icon-arrow-4-diag", action: "showFullscreen" }];
+            var icons = [{ class: "prev", action: "step", params: "prev" }, { class: "play", action: "play" }, { class: "pause", action: "stop" }, { class: "next", action: "step", params: "next" }, { class: "fullscreen", action: "showFullscreen" }];
             d = document.createElement("div");
             d.classList.add("slideshow_controls");
             u = document.createElement("ul");
@@ -1965,12 +1903,12 @@ require("./DisplayBase");
                     continue;
                 }
                 l = document.createElement("li");
-                l.classList.add("ui-state-default", "ui-corner-all");
+
                 l.addEventListener("click", function (icon, that) {
                     return function (e) {
                         e.stopPropagation();
                         if (icon.action === "play" && that.interval) {
-                            e.currentTarget.classList.remove("ui-state-active");
+                            e.currentTarget.classList.remove("selected");
                             that["stop"]();
                             that.autoplay = false;
                             return;
@@ -1978,11 +1916,11 @@ require("./DisplayBase");
                         if (icon.action === "step" && that.interval) {
                             that.stop();
                         }
-                        e.currentTarget.classList.add("ui-state-active");
+                        e.currentTarget.classList.add("selected");
                         sibs = Apoco.Utils.getSiblings(e.currentTarget);
 
                         for (var j = 0; j < sibs.length; j++) {
-                            sibs[j].classList.remove("ui-state-active");
+                            sibs[j].classList.remove("selected");
                         }
                         if (icon.params) {
                             that[icon.action](icon.params);
@@ -1993,7 +1931,6 @@ require("./DisplayBase");
                 }(icons[i], this), false);
                 s = document.createElement("span");
                 s.classList.add(icons[i].class);
-                s.classList.add("ui-icon");
                 l.appendChild(s);
                 u.appendChild(l);
             }
@@ -2093,7 +2030,7 @@ require("./DisplayBase");
                     that.stop();
                 }
                 if (that.controls) {
-                    that.element.querySelector("span.ui-icon-play").click();
+                    that.element.querySelector(".play").click();
                 } else {
                     that.play();
                 }
@@ -2345,14 +2282,11 @@ require("./DisplayBase.js");
 
             tablist = document.createElement("ul");
             tablist.role = "tablist";
-            tablist.classList.add("ui-tabs-nav", "ui-helper-reset", "ui-helper-clearfix", "ui-widget-header", "ui-corner-all", "tabs");
 
-            for (var i = 0; i < this.components.length; i++) {
-                tt[i] = this.components[i];
-            }
+            tablist.classList.add("tabs");
 
             this.element.appendChild(tablist);
-            for (var i = 0; i < tt.length; i++) {
+            for (var i = 0; i < this.components.length; i++) {
                 this.addTab(i, tablist);
             }
             if (this.selected) {
@@ -2365,19 +2299,27 @@ require("./DisplayBase.js");
                 index,
                 s,
                 that = this;
-
+            var alreadyHaveName = function alreadyHaveName(rr, index) {
+                for (var i = 0; i < that.components.length; i++) {
+                    if (index !== i && that.components[i].name == rr) {
+                        throw new Error("DsiplayTabs: Already has a tab named " + rr);
+                    }
+                }
+            };
             if (tablist === undefined) {
-                tablist = this.element.querySelector("ul.ui-tabs-nav");
+                tablist = this.element.querySelector("ul.tabs");
             }
             if (Number.isInteger(t)) {
+                alreadyHaveName(this.components[t].name, t);
                 t = this.components[t];
             } else {
                 index = this.components.length;
+                alreadyHaveName(t.name, index);
                 this.components[index] = t;
             }
             t.label ? label = t.label : label = t.name;
             t.element = document.createElement("li");
-            t.element.classList.add("ui-state-default", "ui-corner-top");
+
             t.element.setAttribute("name", t.name);
 
             if (t.class) {
@@ -2405,6 +2347,7 @@ require("./DisplayBase.js");
                 }, false);
             }
             tablist.appendChild(t.element);
+            return;
         },
 
         update: function update(name) {
@@ -2430,17 +2373,15 @@ require("./DisplayBase.js");
             for (var i = 0; i < this.components.length; i++) {
                 if (this.components[i].name == name) {
                     this.selected = this.components[i];
-                    this.components[i].element.classList.add("selected", "ui-state-active", "ui-tabs-active");
-                    this.components[i].element.classList.remove("ui-state-default");
+                    this.components[i].element.classList.add("selected");
                 } else {
-                    this.components[i].element.classList.add("ui-state-default");
-                    this.components[i].element.classList.remove("selected", "ui-state-active", "ui-tabs-active");
+                    this.components[i].element.classList.remove("selected");
                 }
             }
         },
         reset: function reset() {
             for (var i = 0; i < this.components.length; i++) {
-                this.components[i].element.classList.remove("selected", "ui-state-active", "ui-tabs-active");
+                this.components[i].element.classList.remove("selected");
             }
             this.selected = null;
         }
@@ -2659,6 +2600,44 @@ var Promise = require('es6-promise').Promise;
         }
     };
 
+    var StaticField = function StaticField(d, element) {
+        var that = this;
+        d.field = "static";
+        _Field.call(this, d, element);
+        this.span = document.createElement("span");
+
+        this.setValue(this.value);
+        this.element.appendChild(this.span);
+    };
+    StaticField.prototype = {
+        setValue: function setValue(v) {
+            var t = new String(),
+                p;
+            if (!v) {
+                v = this.value;
+            } else {
+                this.value = v;
+            }
+            if (Apoco.type["array"].check(v)) {
+                for (var i = 0; i < v.length; i++) {
+                    p = v[i];
+                    t = t.concat(p.toString());
+                    if (i < v.length - 1) {
+                        t = t.concat(", ");
+                    }
+                }
+                this.span.textContent = t;
+            } else {
+                this.span.textContent = v;
+            }
+        },
+        getValue: function getValue() {
+            return this.value;
+        }
+    };
+
+    Apoco.Utils.extend(StaticField, _Field);
+
     var InputField = function InputField(d, element) {
         var that = this;
         d.field = "input";
@@ -2666,11 +2645,11 @@ var Promise = require('es6-promise').Promise;
         var s = document.createElement("input");
         s.setAttribute("type", this.html_type);
         this.input = s;
-        if (this.min) {
+        if (this.min !== undefined) {
             this.input.setAttribute("min", this.min);
         }
-        if (this.max) {
-            this.input.setAttribute("min", this.max);
+        if (this.max !== undefined) {
+            this.input.setAttribute("max", this.max);
         }
         if (this.step) {
             this.input.setAttribute("step", this.step);
@@ -2739,7 +2718,7 @@ var Promise = require('es6-promise').Promise;
         }
         if (this.editable === false) {
             this.input[0].readOnly = true;
-            this.input[0].readOnly = true;
+            this.input[1].readOnly = true;
             this.spinner = false;
         }
         if (this.spinner) {
@@ -2749,9 +2728,9 @@ var Promise = require('es6-promise').Promise;
             dec.className = "arrows";
             el.appendChild(dec);
             var up = document.createElement("span");
-            up.classList.add("up", "ui-icon", "ui-icon-triangle-1-n");
+            up.classList.add("up");
             var down = document.createElement("span");
-            down.classList.add("down", "ui-icon", "ui-icon-triangle-1-s");
+            down.classList.add("down");
             dec.appendChild(up);
             dec.appendChild(down);
             if (this.step === undefined) {
@@ -2781,14 +2760,6 @@ var Promise = require('es6-promise').Promise;
                 }
             };
             var eObj = {
-                mouseover: function mouseover(e) {
-                    e.stopPropagation();
-                    e.currentTarget.parentNode.classList.add('ui-state-hover');
-                },
-                mouseout: function mouseout(e) {
-                    e.stopPropagation();
-                    e.currentTarget.parentNode.classList.remove('ui-state-hover');
-                },
                 click: function click(e) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -2942,6 +2913,7 @@ var Promise = require('es6-promise').Promise;
         d.field = "checkBox";
         d.type = "boolean";
         _Field.call(this, d, element);
+
         this.input = document.createElement("input");
         this.input.setAttribute("type", this.html_type);
         this.input.className = "check_box";
@@ -3162,28 +3134,28 @@ var Promise = require('es6-promise').Promise;
     var SelectField = function SelectField(d, element) {
         var i,
             o,
-            that = this;
+            that = this,
+            select_el;
         d.field = "select";
         d.type = "string";
         _Field.call(this, d, element);
-
-        var options = document.createElement("select");
+        select_el = document.createElement("select");
         if (this.required === true) {
-            options.required = true;
+            select_el.required = true;
         }
         for (i = 0; i < this.options.length; i++) {
-
             o = document.createElement("option");
             o.value = this.options[i];
             o.textContent = this.options[i];
-            options.appendChild(o);
+            select_el.appendChild(o);
         }
         if (this.blank_option === true) {
             o = document.createElement("option");
             o.value = "";
-            options.appendChild(o);
+            select_el.appendChild(o);
         }
-        this.select = options;
+        this.select = select_el;
+
         var cd = function (that) {
             return function (e) {
                 e.stopPropagation();
@@ -3521,11 +3493,11 @@ var Promise = require('es6-promise').Promise;
 
         if (this.editable !== false) {
             var sp = document.createElement("span");
-            sp.classList.add("plus", "ui-icon", "ui-icon-plusthick");
+            sp.classList.add("plus");
             var p = this.element.getElementsByTagName("li")[this.element.getElementsByTagName("li").length - 1];
             p.appendChild(sp);
             var sm = document.createElement("span");
-            sm.classList.add("minus", "ui-icon", "ui-icon-minusthick");
+            sm.classList.add("minus");
             p.appendChild(sm);
             var addremove = function addremove(add) {
                 var l = that.input.length,
@@ -3867,7 +3839,7 @@ var Promise = require('es6-promise').Promise;
         box.classList.add(this.type, "apoco_autocomplete");
         this.element.appendChild(box);
         var p = document.createElement("span");
-        p.classList.add("ui-icon", "ui-icon-magnify-left");
+        p.classList.add("search");
         p.innerHTML = "&#x26B2;";
         box.appendChild(p);
         this.input = document.createElement("input");
@@ -3879,7 +3851,7 @@ var Promise = require('es6-promise').Promise;
         box.appendChild(this.input);
 
         this.select = document.createElement("ul");
-        this.select.classList.add("choice", "ui-autocomplete", "ui-menu", "ui-front", "ui-widget-content");
+        this.select.classList.add("choice");
         this.select.style.visibility = "hidden";
         box.appendChild(this.select);
         var handleEvent = function handleEvent(e) {
@@ -4008,13 +3980,20 @@ var Promise = require('es6-promise').Promise;
 
     Apoco.Utils.extend(AutoCompleteField, _Field);
 
-
     Apoco.field = {
         exists: function exists(field) {
             if (this[field]) {
                 return true;
             }
             return false;
+        },
+        static: function _static(options, element) {
+            return new StaticField(options, element);
+        },
+        staticMethods: function staticMethods() {
+            var n = [];for (var k in StaticField.prototype) {
+                n.push(k);
+            }return n;
         },
         input: function input(options, element) {
             return new InputField(options, element);
@@ -4554,7 +4533,7 @@ require("./Types.js");
         },
         clock: function clock(that) {
             that.element = document.createElement("div");
-            that.element.classList.add("Apoco_clock");
+            that.element.classList.add("apoco_clock");
             var cb = function cb(t) {
                 var d = new Date();
                 that.element.textContent = d.toLocaleTimeString();
@@ -4567,7 +4546,7 @@ require("./Types.js");
             var t = that.text ? that.text : that.name;
             that.element = document.createElement("button");
             that.element.type = "button";
-            that.element.classList.add("ui-button");
+            that.element.classList.add("button");
             that.element.textContent = t;
             if (that.disabled === true) {
                 that.element.setAttribute("disabled", "disabled");
@@ -4588,13 +4567,13 @@ require("./Types.js");
             that.current_num = 0;
 
             that.element = document.createElement("div");
-            that.element.classList.add("Apoco_paginate");
+            that.element.classList.add("apoco_paginate");
             var cb = function cb(index, el) {
                 n = el.parentNode.childNodes;
                 for (var i = 0; i < n.length; i++) {
-                    n[i].classList.remove("ui-state-active");
+                    n[i].classList.remove("selected");
                 }
-                el.classList.add("ui-state-active");
+                el.classList.add("selected");
                 that.current_num = index;
                 that.action(that);
             };
@@ -5143,6 +5122,7 @@ var Apoco = require('./declare').Apoco;
             var t = "ERROR ";
             if (Apoco.error === undefined) {
                 title = t.concat(title);
+
                 Apoco.error = this.dialog(title, message, true);
                 Apoco.error.close = function () {
                     document.body.removeChild();
@@ -5181,50 +5161,44 @@ var Apoco = require('./declare').Apoco;
                 this.create = function () {
                     var s, b, t, header;
                     Hdialog = document.createElement("div");
-                    Hdialog.classList.add("Apoco_dialog", "ui-dialog", "resizable", "ui-widget", "ui-widget-content", "ui-corner-all");
+                    Hdialog.classList.add("apoco_dialog");
                     draggable = Apoco.Utils.draggable(Hdialog);
 
                     header = document.createElement("div");
-                    header.classList.add("ui-dialog-titlebar", "ui-widget-header", "ui-corner-all");
+                    header.classList.add("titlebar");
                     title_text = document.createElement("span");
-                    title_text.classList.add("ui-dialog-title");
                     title_text.textContent = title;
                     header.appendChild(title_text);
                     b = document.createElement("button");
-                    b.classList.add("ui-button", "ui-widget", "ui-state-default", "ui-corner-all", "ui-button-icon-only", "ui-dialog-titlebar-close");
+                    b.classList.add("button");
                     header.appendChild(b);
                     b.role = "button";
-                    b.style.float = "right";
                     s = document.createElement("span");
-                    s.classList.add("ui-button-icon-primary", "ui-icon", "ui-icon-closethick");
+                    s.classList.add("close");
                     b.addEventListener("click", this.close, false);
                     b.appendChild(s);
                     Hdialog.appendChild(header);
 
                     s = document.createElement("div");
-                    s.classList.add("ui-dialog-content", "ui-widget-content");
-
+                    s.classList.add("message");
                     message_text = document.createElement("p");
                     message_text.style.float = "right";
                     message_text.textContent = message;
                     b = document.createElement("span");
-                    b.classList.add("ui-icon", "ui-icon-circle-check");
                     s.appendChild(b);
                     s.appendChild(message_text);
                     Hdialog.appendChild(s);
 
                     s = document.createElement("div");
-                    s.classList.add("ui-dialog-buttonpane", "ui-widget-content");
                     t = document.createElement("div");
-                    t.classList.add("ui-dialog-buttonset");
                     s.appendChild(t);
                     b = document.createElement("button");
-                    b.classList.add("ui-button", "ui-widget", "ui-state-default", "ui-corner-all", "ui-button-text-only");
+                    b.classList.add("button");
                     b.type = "button";
                     b.addEventListener("click", this.close, false);
                     t.appendChild(b);
                     t = document.createElement("span");
-                    t.classList.add("ui-button-text");
+                    t.classList.add("text");
                     t.textContent = "OK";
                     b.appendChild(t);
                     Hdialog.appendChild(s);
@@ -5259,41 +5233,33 @@ var Apoco = require('./declare').Apoco;
         },
         spinner: function spinner(on) {
 
-            if (!document.contains(document.getElementById("Apoco_spinner"))) {
+            if (!document.contains(document.getElementById("apoco_spinner"))) {
                 var spinner = document.createElement("div");
-                spinner.id = "Apoco_spinner";
+                spinner.id = "apoco_spinner";
                 document.body.appendChild(spinner);
             }
             if (on === true) {
-                console.log("Apoco spinner on");
-                document.getElementById("Apoco_spinner").style.display = "inherit";
+                document.getElementById("apoco_spinner").style.display = "inherit";
             } else {
-                console.log("Apoco spinner off");
-                document.getElementById("Apoco_spinner").style.display = "none";
+                document.getElementById("apoco_spinner").style.display = "none";
             }
             return spinner;
         },
         alert: function alert(text, time) {
             var nd, ns, np, s;
+
             nd = document.createElement("div");
-            nd.id = "Apoco_alert";
-            nd.classList.add("ui-widget");
+            nd.id = "apoco_alert";
             Apoco.Utils.draggable(nd);
             ns = document.createElement("div");
-            ns.classList.add("ui-state-error", "ui-corner-all");
-            ns.style.padding = "10px";
+            ns.classList.add("alert");
             np = document.createElement("p");
-            np.classList.add("ui-state-error-text");
             s = document.createElement("span");
-            s.classList.add("ui-icon", "ui-icon-alert");
-            s.style.float = "left";
-            s.style.margin = "1em";
             np.appendChild(s);
             s = document.createElement("strong");
             s.textContent = "Alert";
             np.appendChild(s);
             s = document.createElement("span");
-            s.style.margin = "1em";
             s.textContent = text;
             np.appendChild(s);
 
@@ -5314,7 +5280,7 @@ var Apoco = require('./declare').Apoco;
         },
         trouble: function trouble(heading, text) {
             var a = document.createElement("div");
-            a.id = "Apoco_trouble";
+            a.id = "apoco_trouble";
 
             var b = document.createElement("h1");
             b.textContent = heading;
@@ -6660,7 +6626,7 @@ var Apoco = require('./declare').Apoco;
                     throw new Error("datepicker: element must be an input node");
                 }
 
-                element.classList.add("Apoco_datepicker_input");
+                element.classList.add("apoco_datepicker_input");
                 element.addEventListener("click", click, false);
                 element.addEventListener("change", change, false);
             }
@@ -6691,62 +6657,62 @@ var Apoco = require('./declare').Apoco;
                 title,
                 span,
                 that = this;
-            var icons = [{ id: "Apoco_datepicker_prevYear",
+            var icons = [{ id: "apoco_datepicker_prevYear",
                 func: function func(e) {
                     e.stopPropagation();
                     if (that.selectedDate) {
                         var f = that.selectedDate.getFullYear() - 1;
                         that.selectedDate.setFullYear(f);
                         that.mkCalendarBody(this.selectedDate);
-                        var p = that.calendar.querySelector("td.ui-state-active");
+                        var p = that.calendar.querySelector("td.selected");
                         if (p) {
-                            p.classList.remove("ui-state-active");
+                            p.classList.remove("selected");
                         }
                     }
                 }
-            }, { id: "Apoco_datepicker_prevMonth",
+            }, { id: "apoco_datepicker_prevMonth",
                 func: function func(e) {
                     e.stopPropagation();
                     if (that.selectedDate) {
                         var f = that.selectedDate.getMonth() - 1;
                         that.selectedDate.setMonth(f);
                         that.mkCalendarBody(that.selectedDate);
-                        var p = that.calendar.querySelector("td.ui-state-active");
+                        var p = that.calendar.querySelector("td.selected");
                         if (p) {
-                            p.classList.remove("ui-state-active");
+                            p.classList.remove("selected");
                         }
                     }
                 }
-            }, { id: "Apoco_datepicker_nextYear",
+            }, { id: "apoco_datepicker_nextYear",
                 func: function func(e) {
                     e.stopPropagation();
                     if (that.selectedDate) {
                         var f = that.selectedDate.getFullYear() + 1;
                         that.selectedDate.setFullYear(f);
                         that.mkCalendarBody(that.selectedDate);
-                        var p = that.calendar.querySelector("td.ui-state-active");
+                        var p = that.calendar.querySelector("td.selected");
                         if (p) {
-                            p.classList.remove("ui-state-active");
+                            p.classList.remove("selected");
                         }
                     }
                 }
-            }, { id: "Apoco_datepicker_nextMonth",
+            }, { id: "apoco_datepicker_nextMonth",
                 func: function func(e) {
                     e.stopPropagation();
                     if (that.selectedDate) {
                         var f = that.selectedDate.getMonth() + 1;
                         that.selectedDate.setMonth(f);
                         that.mkCalendarBody(that.selectedDate);
-                        var p = that.calendar.querySelector("td.ui-state-active");
+                        var p = that.calendar.querySelector("td.selected");
                         if (p) {
-                            p.classList.remove("ui-state-active");
+                            p.classList.remove("selected");
                         }
                     }
                 }
             }];
             table = document.createElement("table");
-            table.id = "Apoco_datepicker_controls";
-            table.classList.add("ui-datepicker-header", "ui-widget-header", "ui-helper-clearfix", "ui-corner-all");
+            table.id = "apoco_datepicker_controls";
+
             this.element.appendChild(table);
             body = document.createElement("tbody");
             table.appendChild(body);
@@ -6760,16 +6726,16 @@ var Apoco = require('./declare').Apoco;
                 span = document.createElement("span");
                 span.id = icons[i].id;
                 if (i === 0) {
-                    span.classList.add("ui-icon", "ui-icon-circle-arrow-w");
+                    span.classList.add("big_west");
                 } else {
-                    span.classList.add("ui-icon", "ui-icon-circle-triangle-w");
+                    span.classList.add("west");
                 }
                 span.addEventListener("click", icons[i].func, false);
                 col.appendChild(span);
             }
             title = document.createElement("td");
-            title.id = "Apoco_datepicker_title";
-            title.classList.add("ui-datepicker-title");
+            title.id = "apoco_datepicker_title";
+
             row.appendChild(title);
             col = document.createElement("td");
             col.classList.add("arrows");
@@ -6779,15 +6745,15 @@ var Apoco = require('./declare').Apoco;
                 span = document.createElement("span");
                 span.id = icons[i].id;
                 if (i === 2) {
-                    span.classList.add("ui-icon", "ui-icon-circle-arrow-e");
+                    span.classList.add("big_east");
                 } else {
-                    span.classList.add("ui-icon", "ui-icon-circle-triangle-e");
+                    span.classList.add("east");
                 }
                 span.addEventListener("click", icons[i].func, false);
                 col.appendChild(span);
             }
             this.calendar = document.createElement("table");
-            this.calendar.id = "Apoco_datepicker_grid";
+            this.calendar.id = "apoco_datepicker_grid";
             this.element.appendChild(this.calendar);
             body = document.createElement("tbody");
             this.calendar.appendChild(body);
@@ -6800,25 +6766,29 @@ var Apoco = require('./declare').Apoco;
             }
             var selectDay = function selectDay(e) {
                 var day, s, p;
-
-                if (e.target.classList.contains("Apoco_date")) {
+                console.log("selectDay is here");
+                console.log("target type is " + e.target.type);
+                console.log("target classlist " + e.target.classList.contains("apoco_date"));
+                if (e.target.classList.contains("apoco_date")) {
                     day = e.target.textContent;
-
+                    console.log("got day " + day);
                     e.stopPropagation();
                     e.preventDefault();
 
-                    p = that.calendar.querySelector("td.ui-state-active");
+                    p = that.calendar.querySelector("td.selected");
                     if (p) {
-                        p.classList.remove("ui-state-active");
+                        p.classList.remove("selected");
                     }
-                    e.target.classList.add("ui-state-active");
+                    e.target.classList.add("selected");
 
                     that.selectedDate.setDate(day);
                     s = that.dateToString(that.selectedDate);
 
                     that.current_element.value = s;
+                    console.log("setected day is " + that.selectedDate);
                 }
             };
+            console.log("adding event listener to apoco_datepicker_grid");
             this.calendar.addEventListener("click", selectDay, false);
         },
         dateToString: function dateToString(date) {
@@ -6853,7 +6823,7 @@ var Apoco = require('./declare').Apoco;
                 }
             }
 
-            c = document.getElementById("Apoco_datepicker_title");
+            c = document.getElementById("apoco_datepicker_title");
             c.textContent = (this.months[current_month].name + " " + current_year).toString();
 
             var tbody = this.calendar.getElementsByTagName("tbody")[0];
@@ -6895,24 +6865,24 @@ var Apoco = require('./declare').Apoco;
                 }
                 c = document.createElement("td");
                 if (i < start_day) {
-                    c.className = "ui-state-disabled";
+                    c.className = "disabled";
                 } else if (i === start_day) {
                     p = 1;
-                    c.classList.add("Apoco_date");
+                    c.classList.add("apoco_date");
                 } else if (i === ml + start_day) {
                     p = 1;
-                    c.className = "ui-state-disabled";
+                    c.className = "disabled";
                 } else if (i > ml + start_day) {
-                    c.className = "ui-state-disabled";
+                    c.className = "disabled";
                 }
                 c.textContent = p;
                 if (i >= start_day && i < ml + start_day) {
-                    c.classList.add("Apoco_date");
+                    c.classList.add("apoco_date");
                     if (p === today) {
-                        c.classList.add("ui-state-highlight");
+                        c.classList.add("highlight");
                     }
                     if (p === day) {
-                        c.classList.add("ui-state-active");
+                        c.classList.add("selected");
                     }
                 }
                 r.appendChild(c);
@@ -6924,8 +6894,8 @@ var Apoco = require('./declare').Apoco;
             if (this.element === undefined) {
                 this.element = document.createElement('div');
 
-                this.element.id = "Apoco_datepicker";
-                this.element.classList.add("ui-datepicker", "ui-widget-content", "ui-corner-all");
+                this.element.id = "apoco_datepicker";
+
                 document.getElementsByTagName("body").item(0).appendChild(this.element);
                 this.mkCalendarHeader();
             }
