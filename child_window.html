@@ -5,43 +5,40 @@
     <meta charset="utf-8" >
     <meta name="description" content="" >
     <meta name="keywords" content="" >
-    <title>Apoco Manual</title> 
     <link type="text/css" href="css/jquery-ui-1.11.4.custom/jquery-ui.css" rel="stylesheet" >
     <link type="text/css" href="css/base.css" rel="stylesheet" >
     <link type="text/css" href="css/form.css" rel="stylesheet" >
-    <link type="text/css" href="css/manual.css" rel="stylesheet" >
-    <link type="image/x-icon" href="css/images/favicon.ico" rel="icon" >
-    <script type="text/javascript" src="apoco.js"></script>
-    <script type="text/javascript" src="test/data/data.js"></script>
-    <script type="text/javascript" src="./config/ManualUI_defs.js"></script>
-   </head>
-   <script>
-
-     window.onload=function(){
-          console.log("UI start is %j ",UI.start);
-          Apoco.start(UI.start);
-      };
-  
-    </script>
+    <title></title> <!-- this is purposely left blank -->
  
+     <script type="text/javascript">
+
+                console.log("child window document ready");
+          	window.onload=function(){
+	        var e=new Event("childReady");
+	        e.data=window;
+	        console.log("Apoco.childReady here ");
+	        window.opener.dispatchEvent(e);
+             };
+   
+  
+   </script>
+
+   </head>
+
 <body>
-<div id="test"> 
+
+
+<div id="wrapper"> 
 
     <div class="bannertop"> 
 	<div id="Head">
-           
 	</div>
    </div> <!-- end bannertop -->
 
- <div id="Main">
+ <div id="main">
 
 	<div id="Content" class="ui-corner-bottom">
-         
-          <div id="left">       
-          </div>
-          <div id="right">
-          </div>
-
+	
 	</div>
    
 	<div>  
@@ -53,19 +50,21 @@
 	  </noscript>
       
         </div>
+
+ 
+
+
+  
    </div>
   
 
  <div id="Tail">
-  
+      <p class="footer_text">
+	
+       <!-- put the time here -->
+      </p>
 </div>
    
    </div> <!-- end wrapper -->
-   <div id="Footer">
-    <p class="footer_text">
-	 
-           Copyright &copy;  2012-2016 Perluceo Ltd. All rights reserved
-    </p>
-</div>
   </body>
 </html>
