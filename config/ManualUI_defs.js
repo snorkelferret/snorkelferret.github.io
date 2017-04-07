@@ -554,6 +554,10 @@ var UI={};
                     "return: void",
                     "If the field is an array, value is an array, or a single value and index into the array<br> Set Value is the way to update values in memory"
                 ]},
+                valueChanged: {descriptions: [  "<code>var r=field.valueChanged();</code>",
+                                                "return: boolean",
+                                                "If the value has been changes in the browser return true"
+                ]},
                 checkValue:{descriptions:[
                     "<code>var r=field.checkValue();</code>",
                     "return: boolean",
@@ -1044,7 +1048,6 @@ var UI={};
                                if(!f){
                                    throw new Error("can't get input params");
                                }
-
                                globalEval(f.getValue());
                                if(Apoco.type["object"].check(node)){
                       //             console.log("and it is an object");
@@ -1086,15 +1089,15 @@ var UI={};
             form:{required:[{label:"components",descriptions:[ "An array of nodes and/or field objects","example",
                                                                "<code>components: [{node:'heading',size:'h4',text:'heading'},{field:'float',name:'some_name',value:10.0}}]</code>"]}],
                   options:[{label:"buttons",descriptions:["an array of button objects","example","<code> buttons: [{name: 'string',text:'string',action: function(that){ //some code }}]</code>"]},{label:"hidden",descriptions:["type:boolean","default: false","add the node to the DOM"]},
-                           {label:"draggable",descriptions:["type: boolean","default: true","if true the form is detached and can be dragged around the browser window"]},
+                           {label:"draggable",descriptions:["type: boolean","default: false","if true the form is detached and can be dragged around the browser window"]},
                            {label: "label",description: "type: string"}]},
-            grid:{required:[{label: "cols",descriptions:["type: objectArray","array of fields based on type or the field may be specified directly","example","<code>cols:[{name:'colname1',type:'string',editable:false},{name:'colname2',type:'float',required:true,resizable:true,precision:2,step:0.1},{field:'select',name:'choose',options:['one','two','three']}]<code>"]},
+            grid:{required:[{label: "cols",descriptions:["type: objectArray","array of fields based on type or the field may be specified directly","example","<code>cols:[{name:'colname1',type:'string',editable:false},{name:'colname2',type:'float',required:true,resizable:true,precision:2,step:0.1},{field:'select',title; 'Pick one',name:'choose',options:['one','two','three']}]<code>","options are the same as for the fields with the addition of the title option - which is the text displayed in the head - defaults to name"]},
                             {label:"rows",descriptions:["type:objectArray","if the cols were defined as above then the rows would be","<code> rows:[{colname1:'some_string',colname2:23.53,choose:'one'},{colname1:'another_string',colname2:34.66,choose:'three'}]"]}],
                   options:[
-                      {label:"userSortable",descriptions:["type: boolean","can the user sort the cols","userSortable and sortOrder are mutually exclusive"]},
-                      {label:"sortOrder",descriptions:["type:stringArray","column names to sort the grid rows","example","<code>sortOrder:['colname1','colname2']<code","sort the rows first by colname1 and then colname2"]},
-                      {label:"groupBy",descriptions:["type: stting","split the row data into separate grids based on the value of the column in the row data","example","<code>groupBy: 'colname1',<code>","if the column has a label it will be used as a the subgrid seperator"]},
-                      {label:"uniqueKey",descriptions:["type: string","the column name of the uniqueKey if it exists"]},
+                      {label:"userSortable",descriptions:["type:stringArray","default: cols are not sortable","list the columns by name that he user can sort"]},
+                      {label:"sortOrder",descriptions:["type:stringArray","column names to sort the grid rows","example","<code>sortOrder:['colname1','colname2']<code","Initial sortOrder-  sort the rows first by colname1 and then colname2","default: sort the grid with the uniqueKey"]},
+                      {label:"groupBy",descriptions:["type: stting","split the row data into separate grids based on the value of the column in the row data","example","<code>groupBy: 'colname1',<code>","if the column has a title it will be used as a the subgrid seperator"]},
+                      {label:"uniqueKey",descriptions:["type: stringArray","the set of column names that  uniquely determine a row (f it exists)","If no uniqueKey is given an id is added called '_aid'","You can access the uniqeKey with <code> var key=mygrid.uniqueKey;<code> which returns a string array "]},
                       {label: "resizable",descriptions:["type: boolean","Add the resize widget to the bottom rhs"]},
                        {label:"hidden",descriptions:["type:boolean","default: false","add the node to the DOM"]}
                   ]},
@@ -1157,14 +1160,13 @@ var UI={};
             k.hidden=true;
             k.id=HDisplays[i];
             k.dependsOn=HDisplays[i];
-            k.action=function(that){
-              //  console.log("triggering click with id ", that.id);
+            k.action=function(that){      
+                console.log("triggering click with id ", that.id);
                 var p=that.getChild("doit");
-                p.element.click();
-                var dobj=window[(that.id + "_obj")];
-                if(dobj){
-                    dobj.hide();  // hide the display first time round
-                }
+                if(p){
+                    p.element.click();
+
+                };
             },
             k.components=[{node: "heading",size: "h3", text: HDisplays[i]},
                           {node:"paragraph", text: "<code>var node=Apoco.display['" + HDisplays[i] + "'](dataObject);</code>"},
@@ -1290,7 +1292,8 @@ var UI={};
             insertRow: ["<code> var v=my_display.insertRow(row); </code>"],
             redrawRows: ["<code> var v=my_display.redrawRows(grid_name); </code>"],
             updateRow: ["<code> var v=my_display.updateRow(row); </code>"],
-            getRowFromElement: ["<code> var v=my_display.getRowFromElement(htmlObject); </code>"],
+            rowEditPopup:["<code> my_display.rowEdirPopup(row,buttons,editOverrides)</code>","Creates a form","where"," row is a grid row - e.g return from getRow()","buttons : an Object array (see form) e.g buttons=[{name:'OK',action:function(that){ console.loh('hullo')}}]","editOverrides: override the editable status of the cols ","e.g <code> var editable={'col1': true,col2:false};</code>"],
+            getRowFromElement: ["<code> var v=my_display.getRowFromElement(htmlObject); </code>","where the element has a tagName which is either a row (TR) or cell (TD) ","if you need just the uniqueKey fields, use var data=element.dataset; (see html5 dataset)"],
             print: ["<code> var v=my_display.print(); </code>"],
             start: ["<code> var v=my_display.start(); </code>"]
         };
@@ -1317,12 +1320,12 @@ var UI={};
                            value: "var v=window." + HDisplays[i]+"_obj.getKey();"},
                           {name: "doit", node: "button", text: "Go",
                            action: function(that){
-                                               console.log("button action is here");
+                               console.log("display method button action is here");
                                var f=that.parent.getChild("Input_params");
-                               if(!f){
+                              if(!f){
                                    throw new Error("can't get input params");
                                }
-                              console.log("text area is " + f.getValue());
+                               console.log("text area is " + f.getValue());
                                globalEval(f.getValue());
                                var nf=that.parent.getChild("Result");
                                try{
@@ -1497,14 +1500,19 @@ var UI={};
                          ret: "null on error, or undefined on success",
                          des: "unsubscibe from all messages defined in object.listen"
                         },
-            webSocket:{code: "<code>Apoco.IO.webSocket(options,data);</code>",
-                       items:[{label:"options",descriptions:["key value object","default={url:UI.webSocketURL}; ","any other settings in options will be passed to the webSocket"]},
-                              {label: "data",description: "any data that can be stringified using JSON.stringify"}
+            webSocket:{code: "<code>var s=Apoco.IO.webSocket(settings);</code>",
+                       items:[{label:"settings",descriptions:["key value object","default={url:'.'}; ","any other settings in options will be passed to the webSocket"]},
                              ],
-                       ret: "none",
-                       des: "sends and receives messages, received messages are sent with IO.dispatch (Example will throw an error for security reasons)",
-                       cmd: " Apoco.IO.webSocket({url:'/data/websocket'},['logon',{user: 'fred',password: 'flinstone'}]); "
-                      }
+                       ret: "object",
+                       des: "sends and receives messages, received messages are sent with IO.dispatch",
+                    /*   cmd: " var s=Apoco.IO.webSocket({url:'/data/websocket'}); <br> s.send(['logon',{user: 'fred',password: 'flinstone'}]); ", */
+                       methods:[{label: "send",descriptions:["<code>s.send(data); </code>","where data is a key value object that can ne converted to json"]},
+                                {label: "init",descriptions:["<code> s.init(data); </code>","called automatically when object is created"]},
+                                {label: "setToNull",descriptions:["<code> s.setToNull();","set the websocket to null"]},
+                                {label:"getSocket",descriptions:["<code>var p=s.getSocket();</code>","return the websoxket"]},
+                                {label: "cork",descriptions:["<code> s.cork(true);</code>","true: buffer incoming the messages ","<code>s.cork(false);</code>","dispatch the messages in the buffer (if any)"]},
+                                {label: "close",descriptions:["<code>s.close();<code>","close the websocket"]}
+                               ]}
         };
         for(var i=0;i<HIO.length;i++){
            // console.log("making io panel",HIO[i]);
@@ -1522,6 +1530,10 @@ var UI={};
                           {node:"heading",size:"h5",text:"Return"},
                           {node:"paragraph",text:items[HIO[i]].ret }
                          ];
+            if(items[HIO[i]].methods){
+                k.components.push({node:"heading",size:"h5",text:"Methods"}),
+                k.components.push({node:"descriptionList",items:items[HIO[i]].methods});
+            }
             if(items[HIO[i]].cmd){
                 k.components.push({node: "heading",size:"h5",text: "Live Example"});
                 k.components.push({field: "textArea",name:"Input_params",value:items[HIO[i]].cmd});
@@ -1779,12 +1791,12 @@ var UI={};
             getList:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel.getList();</code>","return: stingArray","list the names of all the windows in Apoco"]}],
             show:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel.show(string);</code>"]}],
             showAll:[{label:"Usage",descriptions:["<code>Apoco.Panel.showAll([ ,win])</code>","params: none or string window name, or window Object"]}],
-            addChild:[{label:"Usage",descriptions:["<code>Apoco.Panel[string].addChild(object);</code>","<br> return: nothing","parms: object","a Apoco display Object"]}],
-            deleteChild:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel[string].deleteChild(object);</code>"]}],
-            deleteChildren:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel[string].deleteChildren();</code>"]}],
-            findChild:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel[string].findChild(object);</code>"]}],
-            getChild:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel[string].getChild(string);</code>"]}],
-            getChildren:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel[string].getChildren();</code>"]}]
+            addChild:[{label:"Usage",descriptions:["<code>var d=Apoco.Panel.get(string).addChild(object);</code>","<br> return: object","parms: object","a Apoco display Object of key value pairs"]}],
+            deleteChild:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel.get(string).deleteChild(object);</code>"]}],
+            deleteChildren:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel.get(string).deleteChildren();</code>"]}],
+            findChild:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel.get(string).findChild(object);</code>"]}],
+            getChild:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel.get(string).getChild(string);</code>"]}],
+            getChildren:[{label:"Usage",descriptions:["<code>var v=Apoco.Panel.get(string).getChildren();</code>"]}]
         };
 
 
