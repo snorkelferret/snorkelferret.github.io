@@ -1080,7 +1080,7 @@ require("./Sort.js");
                 this.show();
             }
         },
-        rowEditPopup: function rowEditPopup(row, buttons, editOverride) {
+        rowEditPopup: function rowEditPopup(row, buttons, override) {
             var b,
                 d,
                 that = this,
@@ -1089,22 +1089,22 @@ require("./Sort.js");
                 settings = { draggable: true,
                 components: []
             };
-            console.log("this DOM is " + this.DOM);
+
             if (Apoco.type["string"].check(this.DOM)) {
                 settings.DOM = this.DOM;
             } else {
                 settings.DOM = this.DOM.id;
             }
-            console.log("rowEditPopup: got row %j", row);
-            if (editOverride && !Apoco.type["object"].check(editOverride)) {
-                throw new Error("rowEditPopup: edit override should be an object not %j ", editOverride);
+
+            if (override && !Apoco.type["object"].check(override)) {
+                throw new Error("rowEditPopup: edit override should be an object not %j ", override);
             }
             settings.id = "rowEditPopup";
             b = document.getElementById(settings.id);
             if (document.contains(b)) {
                 b.parentNode.removeChild(b);
             }
-            console.log("got edit overrides %j", editOverride);
+
 
             for (var i = 0; i < this.cols.length; i++) {
                 p = {};
@@ -1122,9 +1122,11 @@ require("./Sort.js");
             }
 
             for (var i = 0; i < settings.components.length; i++) {
-                for (var k in editOverride) {
+                for (var k in override) {
                     if (settings.components[i].name === k) {
-                        settings.components[i].editable = editOverride[k];
+                        for (var m in override[k]) {
+                            settings.components[i][m] = override[k][m];
+                        }
                     }
                 }
             }
@@ -1132,7 +1134,7 @@ require("./Sort.js");
             if (buttons && Apoco.type["object"].check(buttons)) {
                 settings["buttons"] = buttons;
             }
-            console.log("+++++ adding form with settings %j", settings);
+
             var f = Apoco.display["form"](settings);
             return f;
         },
@@ -3577,7 +3579,7 @@ var Promise = require('es6-promise').Promise;
             this.length = 4;
         }
         for (var i = 0; i < this.length; i++) {
-            if (this.value[i]) {
+            if (this.value && this.value[i]) {
                 this.addValue(this.value[i], i);
             } else {
                 this.addValue("", i);
