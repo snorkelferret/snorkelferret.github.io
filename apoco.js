@@ -801,7 +801,7 @@ require("./Sort.js");
             } else {
                 throw new Error("DisplayGrid: _mkSortorder needs a string array");
             }
-            console.log("MakeSortOrder: got initial sortOrder %j", sortOrder + "param  was %j", s);
+
             if (this.uniqueKey) {
                 if (!Apoco.type["stringArray"].check(this.uniqueKey)) {
                     throw new Error("DisplayGrid: unique key is not a stringArray");
@@ -820,15 +820,12 @@ require("./Sort.js");
                             not_found.push(this.uniqueKey[i]);
                         }
                     }
-
                     for (var i = 0; i < not_found.length; i++) {
                         sortOrder.push(not_found[i]);
                     }
-
-                    console.log("_MakeSortOrder: sortOrder length is " + this.sortOrder.length);
                 }
             }
-            console.log("MakeSortOrder returning array %j", sortOrder);
+
             return sortOrder;
         },
         _execute: function _execute() {
@@ -1067,7 +1064,6 @@ require("./Sort.js");
                                 e.preventDefault();
                                 that.sortOrder = that._mkSortOrder([col.name]);
                                 that.sort(dir);
-                                console.log("got that.cols " + col.name);
                             }
                         };
                     }(this.cols[index], that), false);
@@ -1270,13 +1266,10 @@ require("./Sort.js");
             for (var i = 0; i < this.uniqueKey.length; i++) {
                 s = "data-";
                 s = s.concat(this.uniqueKey[i]);
-                console.log("getRowFromElement: uniqueKey is " + this.uniqueKey[i] + " attribute " + s);
+
                 c = element.getAttribute(s);
-                console.log("Rowfromelement got data " + c);
+
                 key[this.uniqueKey[i]] = c;
-                for (var k in c) {
-                    console.log("getRowFromElement got key " + k + " with value  " + c[k]);
-                }
             }
             if (this.groupBy) {
                 s = 'data-';
@@ -1470,7 +1463,7 @@ require("./Sort.js");
                 if (grid[i].name === undefined) {
                     throw new Error("grid " + i + "name is " + grid[i].name);
                 }
-                console.log("searching grid ", grid[i].name);
+
                 if (grid[i].sorted) {
                     if (this.closest) {
                         if (this.sortOrder === undefined) {
@@ -2652,13 +2645,11 @@ var Promise = require('es6-promise').Promise;
             return this.value;
         },
         valueChanged: function valueChanged() {
-            console.log("Value Changed getValue is " + this.getValue() + " and value is " + this.value);
 
             if (this.getValue() != this.value) {
-                console.log("ValueChanged: return true");
                 return true;
             }
-            console.log("ValueChanged: return false");
+
             return false;
         },
         checkValue: function checkValue() {
@@ -3718,7 +3709,6 @@ var Promise = require('es6-promise').Promise;
                 }
             }
             if (this.input.length > this.length && this.length > 0) {
-                console.log("this input length " + this.input.length + " original length " + this.length);
                 for (var i = this.input.length - 1; i > this.length; i--) {
                     this.deleteValue(i);
                 }
@@ -4339,7 +4329,7 @@ var Promise = require('es6-promise').Promise;
                 throw new Error("webSocket: no data or name from server");
             }
             var d = JSON.parse(e.data);
-            console.log("Websocket: got: %j %j", d[0], d[1]);
+
 
             if (that.corking) {
                 that.buffer.push(d);
@@ -5142,7 +5132,6 @@ require("./Window");
             if (Apoco.type['string'].check(obj)) {
                 obj = this.getChild(obj);
             }
-
             for (var i = 0; i < this.components.length; i++) {
                 if (obj === this.components[i]) {
                     index = i;
@@ -6231,11 +6220,11 @@ String.prototype.trim = String.prototype.trim || function trim() {
             } else {
                 compare = function compare(aa) {
                     var field, item;
-                    console.log("Compare: sort_order is %j", sort_order);
+
                     for (var i = 0; i < sort_order.length; i++) {
                         field = sort_order[i];
                         item = data[field];
-                        console.log("field is " + field + " value is " + item);
+
                         if (aa[field].value == item) {
                             continue;
                         } else if (aa[field].value > item) {
