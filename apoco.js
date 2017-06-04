@@ -872,6 +872,7 @@ require("./Sort.js");
                     }
                 }
                 this.sort();
+                this.redrawRows();
             }
         },
         _afterShow: function _afterShow() {
@@ -940,7 +941,8 @@ require("./Sort.js");
             for (var j = 0; j < this.grids.length; j++) {
                 Apoco.sort(this.grids[j].rows, ar);
                 this.grids[j].sorted = true;
-                if (dir === "down") {
+
+                if (dir && dir === "down") {
                     this.grids[j].rows.reverse();
                 }
             }
@@ -1064,6 +1066,7 @@ require("./Sort.js");
                                 e.preventDefault();
                                 that.sortOrder = that._mkSortOrder([col.name]);
                                 that.sort(dir);
+                                that.redrawRows();
                             }
                         };
                     }(this.cols[index], that), false);
@@ -1296,7 +1299,8 @@ require("./Sort.js");
                             for (var k = 0; k < this.cols.length; k++) {
                                 if (this.cols[k].name === this.sortOrder[i]) {
                                     if (this.cols[k].editable === false) {
-                                        key[this.sortOrder[i]] = c[j].textContent;
+                                        ci = c[j].getElementsByTagName("span");
+                                        key[this.sortOrder[i]] = ci[0].textContent;
                                         break;
                                     }
 
@@ -1627,22 +1631,37 @@ require("./Sort.js");
             }
         },
         redrawRows: function redrawRows(grid_name) {
+            var b,
+                g,
+                p,
+                name,
+                grids = [];
             if (!grid_name) {
-                if (this.grids.length === 1) {
-                    grid_name = "all";
-                } else {
-                    throw new Error("redrawRows: must specify the grid group name");
-                    return null;
+                grids = this.grids;
+            } else {
+                grids[0] = this.getGrid(grid_name);
+                if (!grids[0]) {
+                    throw new Error("DisplayGrid: cannot find grid named " + grid_name);
                 }
             }
-            var b = this.grids[grid_name].element.getElementsByTagName("tbody")[0];
-            b.innerHTML = "";
 
-            for (var i = 0; i < this.grids[grid_name].rows.length; i++) {
-                b.appendChild(this.grids[grid_name].rows[i].element);
+            for (var i = 0; i < this.cols.length; i++) {
+                if (this.cols[i].hidden !== true) {
+                    name = this.cols[i].name;
+                    break;
+                }
+            }
+            if (!name) throw new Error("DisplayGrid: Cannot find col that is not hidden");
+            for (var i = 0; i < grids.length; i++) {
+                b = grids[i].element.getElementsByTagName("tbody")[0];
+                b.innerHTML = "";
+
+                for (var j = 0; j < grids[i].rows.length; j++) {
+                    p = grids[i].rows[j][name].element.parentNode;
+                    b.appendChild(p);
+                }
             }
         },
-
         getJSON: function getJSON() {
             var c, t, m;
             var n = { rows: [] };
@@ -1935,10 +1954,13 @@ require("./DisplayBase");
                 that = this;
             var doit = function doit(e) {
                 e.stopPropagation();
-                if (e.target.classList.contains("left")) {
+                if (that.autoplay) {
+                    that.stop();
+                }
+                if (e.target.classList.contains("left") || e.target.parentNode.classList.contains("left")) {
                     that.step("next");
                 } else {
-                    that.step("next");
+                    that.step("prev");
                 }
             };
             for (var i = 0; i < 2; i++) {
@@ -1997,21 +2019,36 @@ require("./DisplayBase");
             }
             that.element.appendChild(d);
         },
+        _getTopOffset: function _getTopOffset() {
+            var e,
+                y = this.element.offsetTop;
+            e = this.element;
+
+            while (e = e.offsetParent) {
+                y += e.offsetTop;
+            }
+            return y;
+        },
         _calculateCover: function _calculateCover(v) {
 
-            var ar, w, h;
+            var ar, w, h, y;
             if (this.keepAspectRatio === false) {
                 return;
             }
-
+            if (!document.contains(this.element)) {
+                return;
+            }
             w = window.getComputedStyle(this.slideshow_container, null).getPropertyValue("width").split("px");
             h = window.getComputedStyle(this.slideshow_container, null).getPropertyValue("height").split("px");
             this.width = parseInt(w);
             this.height = parseInt(h);
 
+            if (parseInt(this.height) === 0) {
+                y = this._getTopOffset();
+                this.height = window.innerHeight - y;
+            }
 
             if (parseInt(this.height) > 0) {
-
                 ar = this.width / this.height;
             } else {
                 ar = 0;
@@ -2045,23 +2082,21 @@ require("./DisplayBase");
         _setToWidth: function _setToWidth(v, ar) {
             var w,
                 h,
+                m,
                 that = this;
             v.SSimage.style.margin = "0";
-            console.log("FIT to WIDTH");
             h = this.width / v.aspect_ratio;
-            console.log("need height " + h);
+
             if (this.height < h && this.fit_to === "width") {
                 h = parseInt(h);
-                console.log("setting height to " + h);
-                this.element.style.height = h + "px";
-                this.height = h;
-                console.log("this.height " + this.height);
-            }
 
-            w = that.width.toString() + "px";
-            console.log("new image width is " + w);
-            v.SSimage.style.width = w + "px";
-            v.SSimage.style.height = h + "px";
+                m = parseInt((h - this.height) / 2);
+                v.SSimage.style.height = h + "px";
+                v.SSimage.style.marginTop = -m + "px";
+                v.SSimage.style.marginBottom = -3 * m + "px";
+            } else {
+                v.SSimage.style.height = h + "px";
+            }
             if (this.fit_to !== "width") {
                 h = (that.height - h) / 2;
                 v.SSimage.style.marginTop = h + "px";
@@ -2105,7 +2140,9 @@ require("./DisplayBase");
         _execute: function _execute() {
             var that = this,
                 temp,
-                pp;
+                pp,
+                element;
+
 
             this.slideshow_container = document.createElement("div");
             this.slideshow_container.classList.add("slideshow", "pic_area");
@@ -2121,13 +2158,24 @@ require("./DisplayBase");
                 this.components[i].element.appendChild(this.components[i].SSimage);
                 this.components[i].SSimage.parentElement.style.visibility = "hidden";
 
-                if (this.components[i].text) {
-                    temp = document.createElement("div");
-                    this.components[i].element.appendChild(temp);
-                    pp = document.createElement("p");
-                    pp.textContent = this.components[i].text;
-                    temp.appendChild(pp);
-                    this.hasText = true;
+                if (this.components[i].content) {
+                    element = document.createElement("div");
+                    element.classList.add("slideshow_content");
+                    this.components[i].element.appendChild(element);
+
+                    if (!element) {
+                        throw new Error("cannot find slideshow element");
+                    }
+                    for (var j = 0; j < this.components[i].content.length; j++) {
+                        temp = this.components[i].content[j];
+                        if (temp["node"]) {
+                            pp = Apoco.node(temp, element);
+                        } else if (temp["field"]) {
+                            pp = Apoco.field(temp, element);
+                        } else {
+                            throw new Error("content array must contain either nodes or fields");
+                        }
+                    }
                 }
 
                 this.promises[i].then(function (v) {
@@ -2141,6 +2189,25 @@ require("./DisplayBase");
             }
             if (that.sideArrows === true) {
                 that._sideArrows();
+            }
+            if (that.fit_to) {
+                window.addEventListener("resize", function (e) {
+                    var resizeTimeout;
+
+                    e.stopPropagation();
+
+                    if (!resizeTimeout) {
+                        resizeTimeout = setTimeout(function () {
+                            resizeTimeout = null;
+
+                            for (var i = 0; i < that.components.length; i++) {
+                                if (that.components[i].loaded) {
+                                    that._calculateCover(that.components[i]);
+                                }
+                            }
+                        }, 100);
+                    }
+                }, false);
             }
         },
         deleteAll: function deleteAll() {
@@ -2214,6 +2281,9 @@ require("./DisplayBase");
         },
         play: function play() {
             var that = this;
+            if (!document.contains(this.element)) {
+                return;
+            }
             this.step("next");
             this.autoplay = true;
             this.interval = setInterval(function () {
@@ -2221,16 +2291,32 @@ require("./DisplayBase");
             }, this.delay);
         },
         stop: function stop() {
-            var that = this;
+            var that = this,
+                found = 0;
             if (this.interval) {
                 clearInterval(that.interval);
             }
             this.interval = null;
+
+            if (that.fade_timer !== 0) {
+                clearInterval(that.fade_timer);
+                that.fade_timer = 0;
+                for (var i = 0; i < this.components.length; i++) {
+                    if (this.components[i].element.style.visibility === "visible") {
+                        if (found === 0) {
+                            that.components[i].element.style.opacity = 1.0;
+                        } else {
+                            that.components[i].element.style.opacity = 1.0;
+                            that.components[i].element.style.visibility = "hidden";
+                        }
+                        found++;
+                    }
+                }
+            }
         },
         _crossFade: function _crossFade(prev, next) {
             var that = this;
-            var timer,
-                op = 0.05,
+            var op = 0.05,
                 inc = 0.1,
                 step = 40;
 
@@ -2245,9 +2331,12 @@ require("./DisplayBase");
             that.components[next].element.style.opacity = op;
             that.components[next].element.style.filter = 'alpha(opacity=' + op * 100 + ")";
 
-            timer = setInterval(function () {
+            that.fade_timer = setInterval(function () {
                 if (op >= 1.0) {
-                    clearInterval(timer);
+                    clearInterval(that.fade_timer);
+
+                    that.fade_timer = 0;
+                    op = 1.0;
 
                     that.components[prev].element.style.visibility = "hidden";
                     that.components[prev].element.style.opacity = 1;
@@ -2262,9 +2351,15 @@ require("./DisplayBase");
             }, step);
         },
         step: function step(dir, caller) {
-            var num = this.components.length;
+            var that = this,
+                num = this.components.length;
             var next,
                 prev = this.current;
+
+            if (this.fade_timer !== 0) {
+                that.stop();
+            }
+
             if (dir === "next") {
                 if (this.current >= num - 1) {
                     this.current = 0;
@@ -2372,7 +2467,8 @@ require("./DisplayBase.js");
             }
             if (Number.isInteger(t)) {
                 alreadyHaveName(this.components[t].name, t);
-                t = this.components[t];
+                index = t;
+                t = this.components[index];
             } else {
                 index = this.components.length;
                 alreadyHaveName(t.name, index);
@@ -2401,7 +2497,7 @@ require("./DisplayBase.js");
                 t.element.addEventListener("click", function (e) {
 
                     e.stopPropagation();
-                    var p = t.action(t, index);
+                    var p = t.action(t);
                     if (p !== false && p !== null) {
                         that.select(t.name);
                     }
@@ -2507,8 +2603,11 @@ var Promise = require('es6-promise').Promise;
         if (this.editable === false) {
             this.popup = false;
         }
-
-        this.html_type = Apoco.type[this.type].html_type;
+        if (Apoco.type[this.type]) {
+            this.html_type = Apoco.type[this.type].html_type;
+        } else {
+            throw new Error("Apoco field does not support type " + this.type);
+        }
         if (element === undefined) {
             this.element = document.createElement("div");
         } else if (element) {
@@ -2687,6 +2786,16 @@ var Promise = require('es6-promise').Promise;
             } else {
                 this.value = v;
             }
+            if (this.type === "date") {
+                if (Apoco.type["integer"].check(this.value)) {
+                    t = new Date(this.value).toISOString();
+                    t = t.split("T");
+                    if (t.length !== 2) {
+                        throw new Error("staticField cannot parse input value " + this.value);
+                    }
+                    this.value = t[0];
+                }
+            }
             if (Apoco.type["array"].check(v)) {
                 for (var i = 0; i < v.length; i++) {
                     p = v[i];
@@ -2697,7 +2806,7 @@ var Promise = require('es6-promise').Promise;
                 }
                 this.span.textContent = t;
             } else {
-                this.span.textContent = v;
+                this.span.textContent = this.value;
             }
         },
         getValue: function getValue() {
@@ -2929,7 +3038,8 @@ var Promise = require('es6-promise').Promise;
     Apoco.Utils.extend(FloatField, _Field);
 
     var DateField = function DateField(d, element) {
-        var that = this;
+        var that = this,
+            t;
         d.field = "date";
         d.type = "date";
         _Field.call(this, d, element);
@@ -2940,7 +3050,16 @@ var Promise = require('es6-promise').Promise;
         }
         this.element.appendChild(this.input);
         if (this.value) {
-            this.input.value = this.value;
+            if (Apoco.type["integer"].check(this.value)) {
+                t = new Date(this.value).toISOString();
+                t = t.split("T");
+                if (t.length !== 2) {
+                    throw new Error("DateField cannot parse input value " + this.value);
+                }
+                this.input.value = t[0];
+            } else {
+                this.input.value = this.value;
+            }
         }
         if (this.editable !== false) {
             if (navigator.appCodeName === "Mozilla") {
@@ -4199,26 +4318,20 @@ var Promise = require('es6-promise').Promise;
             }
         },
         unsubscribe: function unsubscribe(that) {
-            var index = -1;
 
             for (var i = 0; i < that.listen.length; i++) {
                 if (this._subscribers[that.listen[i].name]) {
                     for (var j = 0; j < this._subscribers[that.listen[i].name].length; j++) {
                         if (this._subscribers[that.listen[i].name][j]["context"].action === that.action) {
                             this._subscribers[that.listen[i].name].splice(j, 1);
-                            index = j;
                         }
                     }
                 }
             }
-            if (index !== -1) {
-                if (this._subscribers[that.listen[index].name].length === 0) {
-                    delete this._subscribers[that.listen[index].name];
+            for (var k in this._subscribers) {
+                if (this._subscribers[k].length === 0) {
+                    delete this._subscribers[k];
                 }
-                return undefined;
-            } else {
-                console.log("Apoco.unsubscribe could not find listener");
-                return null;
             }
         },
         publish: function publish(that) {
@@ -4403,6 +4516,107 @@ var Promise = require('es6-promise').Promise;
     };
     Apoco.IO.webSocket = function (options, data) {
         return new _webSocket(options, data);
+    };
+
+    var _dropZone = function _dropZone(element, opts) {
+        var that = this,
+            p;
+        this.opts = opts;
+        if (!window.File && !window.FileReader && !window.FileList && !window.Blob) {
+            return false;
+        }
+        if (!element) {
+            throw new Error("Utils:dropZone - element does not exist");
+        }
+        element.addEventListener("dragover", function (e) {
+            console.log("in drop zone");
+
+            if (!element.classList.contains("drop_zone")) {
+                element.classList.add("drop_zone");
+            }
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+        element.addEventListener("dragenter", function (e) {
+            console.log("enter drop zone");
+
+            element.classList.add("drop_zone");
+            e.stopPropagation();
+        }, false);
+        element.addEventListener("dragleave", function (e) {
+            console.log("leave drop zone");
+
+            element.classList.remove("drop_zone");
+            e.stopPropagation();
+        }, false);
+        element.addEventListener("drop", function (e) {
+            console.log("drop is here");
+
+            element.classList.remove("drop_zone");
+            e.preventDefault();
+            e.stopPropagation();
+
+            that._getFiles(e);
+        }, false);
+        return true;
+    };
+    _dropZone.prototype = {
+        _promises: [],
+        _files: [],
+        _getFiles: function _getFiles(e) {
+            var f,
+                that = this,
+                promise;
+            e.stopPropagation();
+            e.preventDefault();
+            f = e.dataTransfer.files;
+            for (var i = 0; i < f.length; i++) {
+                console.log("got file number " + i + " name " + f[i].name + " type " + f[i].type + " size " + f[i].size + " bytes, date  " + f[i].lastModifiedDate);
+                if (that.opts["maxSize"]) {
+                    if (f[i].size > that.opts.maxSize) {
+                        Apoco.popup.dialog("File too large", "File " + f[i].name + "exceeds the maximum allowable file size");
+                        continue;
+                    }
+                }
+
+                promise = new Promise(function (resolve, reject) {
+                    var reader = new FileReader();
+                    reader.onerror = function (e) {
+                        reject("DropZone Error " + e.target.error.code);
+                    };
+
+                    reader.onload = function (file) {
+                        return function (im) {
+                            console.log("reader im is %j", im);
+                            that._files.push(im);
+                            resolve(file);
+                        };
+                    }(f[i]);
+
+                    reader.readAsDataURL(f[i]);
+                });
+                that._promises.push(promise);
+            }
+            if (this.opts["action"]) {
+                this.opts.action(this._promises);
+            }
+        },
+        getPromises: function getPromises() {
+            return this._promises;
+        },
+        getFileList: function getFileList() {
+            return this._files;
+        },
+        clearPromises: function clearPromises() {
+            this._promises.length = 0;
+        },
+        clearFileList: function clearFileList() {
+            this._files.length = 0;
+        }
+
+    };
+    Apoco.IO.dropZone = function (element, options) {
+        return new _dropZone(element, options);
     };
 })();
 
@@ -4839,27 +5053,29 @@ require("./Window");
             }
             return null;
         },
-        _dumpHTML: function _dumpHTML(filename) {
-            var nodes = [],
+        _dumpHTML: function _dumpHTML(panel_name) {
+            var nodes = new String(),
                 c,
                 found,
                 t = new String();
-            var file;
-            for (var i = 0; i < this._list.length; i++) {
-                for (var j = 0; j < this._list[i].components.length; j++) {
-                    c = this._list[i].components[j];
-                    if (c) {
-                        t = "<!-- INSERT INTO ";
-                        if (Apoco.type.object.check(c.DOM)) {
-                            t = t.concat(c.DOM.id);
-                        } else {
-                            t = t.concat(c.DOM);
-                        }
-                        t = t.concat(" -->");
-                        nodes.push(t);
-                        t = c.element.outerHTML;
-                        nodes.push(t);
+            var f = this._inList(panel_name);
+            if (f === null) {
+                throw new Error("Panel: _dumpHtml needs a panel name");
+            }
+
+            for (var j = 0; j < this._list[f].components.length; j++) {
+                c = this._list[f].components[j];
+                if (c) {
+                    t = "<!-- INSERT INTO ";
+                    if (Apoco.type.object.check(c.DOM)) {
+                        t = t.concat(c.DOM.id);
+                    } else {
+                        t = t.concat(c.DOM);
                     }
+                    t = t.concat(" -->");
+                    nodes = nodes.concat(t);
+                    t = c.element.innerHTML;
+                    nodes = nodes.concat(t);
                 }
             }
             console.log(nodes);
@@ -5466,7 +5682,7 @@ require("./Types");(function () {
 		    n = 0,
 		    i,
 		    j;
-
+		t = t.toString();
 		while (i = (j = t.charAt(x++)).charCodeAt(0)) {
 			var m = i == 46 || i >= 48 && i <= 57;
 			if (m !== n) {
@@ -5500,8 +5716,8 @@ require("./Types");(function () {
 			case "string":
 			case "float":
 			case "positiveInteger":
-			case "date":
 				return generic_compare;
+			case "date":
 			case "token":
 			case "alphaNum":
 				return function (s, t, fn) {
@@ -5532,8 +5748,8 @@ require("./Types");(function () {
 			case "boolean":
 			case "currency":
 			case "email":
-			case "integers2":
-			case "floats2":
+			case "integerArray":
+			case "floatsArray":
 			case "text":
 			case "time":
 			default:
@@ -6476,6 +6692,7 @@ String.prototype.trim = String.prototype.trim || function trim() {
             }
             return siblings;
         },
+
         detectMobile: function detectMobile() {
             if (navigator.userAgent.match(/Android/i) || navigator.userAgent.match(/iPhone/i) || navigator.userAgent.match(/BlackBerry/i) || navigator.userAgent.match(/IEMobile/i)) {
                 return true;
@@ -6483,6 +6700,7 @@ String.prototype.trim = String.prototype.trim || function trim() {
                 return false;
             }
         },
+
         history: {
             init: function init(func) {
                 global.window.addEventListener('popstate', function (event) {
@@ -6504,6 +6722,16 @@ String.prototype.trim = String.prototype.trim || function trim() {
                 c_obj.name = name;
                 var p = "index.html?" + name;
                 history.pushState(c_obj, p, p);
+            },
+            queryString: function queryString() {
+                var name = null,
+                    u = window.location.href;
+                var p = u.split("?");
+                console.log(" got string to start ", p[1]);
+                if (p.length === 2) {
+                    name = p[1].toString();
+                }
+                return name;
             }
         }
     };
