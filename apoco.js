@@ -1969,7 +1969,8 @@ require("./DisplayBase");
                 p.classList.add("arrow");
                 q = document.createElement("i");
                 p.appendChild(q);
-                this.element.appendChild(p);
+
+                this.slideshow_container.appendChild(p);
                 p.addEventListener("click", doit);
             }
         },
@@ -4358,8 +4359,8 @@ var Promise = require('es6-promise').Promise;
             } else {
                 defaults.url = ".";
             }
-            if (type !== "GET" && type !== "POST") {
-                throw new Error("REST: only knows about GET and POST not " + type);
+            if (type !== "GET" && type !== "POST" && type !== "PUT") {
+                throw new Error("REST: only knows about GET PUT and POST not " + type);
             }
 
             var settings = {};
@@ -4399,8 +4400,12 @@ var Promise = require('es6-promise').Promise;
                 request.onreadystatechange = stateChange;
                 request.open(type, settings.url);
                 request.addEventListener('error', reqFail);
-                if (type === "POST") {
+                if (type === "POST" || type === "PUT") {
                     request.setRequestHeader("Content-Type", settings.mimeType);
+                    if (settings['X-Auth-Token']) {
+                        request.setRequestHeader("X-Auth-Token", settings['X-Auth-Token']);
+                    }
+                    console.log("PUT request %j", request);
                     request.send(data);
                 } else {
                     request.responseType = settings.mimeType;
@@ -4528,6 +4533,11 @@ var Promise = require('es6-promise').Promise;
         if (!element) {
             throw new Error("Utils:dropZone - element does not exist");
         }
+        if (this.opts && this.opts.progressBar) {
+            if (this.opts.progressBar.tagName !== "DIV") {
+                throw new Error("Apoco.IO.dropZone - progressBar needs to be a div");
+            }
+        }
         element.addEventListener("dragover", function (e) {
             console.log("in drop zone");
 
@@ -4566,30 +4576,58 @@ var Promise = require('es6-promise').Promise;
         _getFiles: function _getFiles(e) {
             var f,
                 that = this,
-                promise;
+                promise,
+                found;
             e.stopPropagation();
             e.preventDefault();
             f = e.dataTransfer.files;
             for (var i = 0; i < f.length; i++) {
-                console.log("got file number " + i + " name " + f[i].name + " type " + f[i].type + " size " + f[i].size + " bytes, date  " + f[i].lastModifiedDate);
-                if (that.opts["maxSize"]) {
-                    if (f[i].size > that.opts.maxSize) {
-                        Apoco.popup.dialog("File too large", "File " + f[i].name + "exceeds the maximum allowable file size");
+                if (that.opts) {
+                    if (that.opts["maxSize"]) {
+                        if (f[i].size > that.opts.maxSize) {
+                            Apoco.popup.dialog("File too large", "File " + f[i].name + "exceeds the maximum allowable file size");
+                            continue;
+                        }
+                    }
+                    found = true;
+                    if (that.opts["mimeType"]) {
+                        found = false;
+                        for (var j = 0; j < that.opts["mimeType"].length; j++) {
+                            if (f[i].type === that.opts["mimeType"][j]) {
+                                found = true;
+                            }
+                        }
+                    }
+                    if (!found) {
                         continue;
                     }
                 }
 
+
                 promise = new Promise(function (resolve, reject) {
-                    var reader = new FileReader();
-                    reader.onerror = function (e) {
-                        reject("DropZone Error " + e.target.error.code);
+                    var pb = null,
+                        pc,
+                        reader = new FileReader();
+                    reader.onerror = function (evt) {
+                        reject("DropZone Error " + evt.target.error.code);
                     };
+                    if (that.opts && that.opts.progressBar) {
+                        reader.onprogress = function (that) {
+                            return that._doProgress(e);
+                        }(that);
+                        pb = that.opts.progressBar;
+                    }
 
                     reader.onload = function (file) {
-                        return function (im) {
-                            console.log("reader im is %j", im);
-                            that._files.push(im);
-                            resolve(file);
+                        return function (evt) {
+                            evt.stopPropagation();
+
+                            that._files.push(evt.target.result);
+
+                            resolve(evt.target.result);
+                            if (pb) {
+                                pb.textContent = "Uploaded " + file.name;
+                            }
                         };
                     }(f[i]);
 
@@ -4599,6 +4637,29 @@ var Promise = require('es6-promise').Promise;
             }
             if (this.opts["action"]) {
                 this.opts.action(this._promises);
+            }
+        },
+        _doProgress: function _doProgress(evt) {
+            var pl,
+                pb,
+                that = this;
+
+            if (that.opts && that.opts["progressBar"]) {
+                pb = that.opts.progressBar;
+            } else {
+                throw new Error("Cannot find progressBar");
+            }
+
+            if (!pb) {
+                return;
+            }
+            if (evt.lengthComputable) {
+                pl = Math.round(evt.loaded / evt.total * 100);
+
+                if (pl < 100) {
+                    pb.style.width = pl + '%';
+                    pb.textContent = pl + '%';
+                }
             }
         },
         getPromises: function getPromises() {
@@ -4612,6 +4673,10 @@ var Promise = require('es6-promise').Promise;
         },
         clearFileList: function clearFileList() {
             this._files.length = 0;
+        },
+        reset: function reset() {
+            this.clearFileList();
+            this.clearPromises();
         }
 
     };
@@ -6173,7 +6238,7 @@ var Apoco = require('./declare').Apoco;
                 if (Apoco.type.blank.check(s)) {
                     return false;
                 }
-                if (Apoco.type.token.check(s)) {
+                if (Apoco.type.string.check(s)) {
                     return true;
                 }
                 return false;
