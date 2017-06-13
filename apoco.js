@@ -1948,7 +1948,8 @@ require("./DisplayBase");
             }
         },
         _sideArrows: function _sideArrows() {
-            var p,
+            var c,
+                p,
                 q,
                 t = ["right", "left"],
                 that = this;
@@ -1963,14 +1964,19 @@ require("./DisplayBase");
                     that.step("prev");
                 }
             };
+
+            c = document.createElement("div");
+            c.classList.add("arrows");
+            this.element.appendChild(c);
             for (var i = 0; i < 2; i++) {
                 p = document.createElement("div");
                 p.classList.add(t[i]);
                 p.classList.add("arrow");
                 q = document.createElement("i");
                 p.appendChild(q);
+                this.element.appendChild(p);
+                c.appendChild(p);
 
-                this.slideshow_container.appendChild(p);
                 p.addEventListener("click", doit);
             }
         },
@@ -2129,7 +2135,10 @@ require("./DisplayBase");
                 if (that.controls) {
                     that.element.querySelector(".play").click();
                 } else {
-                    that.play();
+                    that.components[this.current].element.style.visibility = "visible";
+                    setTimeout(function () {
+                        that.play();
+                    }, that.delay);
                 }
             } else {
                 if (this.components.length > 0) {
@@ -2285,9 +2294,10 @@ require("./DisplayBase");
             if (!document.contains(this.element)) {
                 return;
             }
-            this.step("next");
-            this.autoplay = true;
-            this.interval = setInterval(function () {
+
+            that.step("next");
+            that.autoplay = true;
+            that.interval = setInterval(function () {
                 that.step("next", "play");
             }, this.delay);
         },
@@ -2326,7 +2336,6 @@ require("./DisplayBase");
             inc = Math.pow(1 / op, 1 / n) - 1.0;
             if (inc <= 0) return;
             that.components[next].element.style.visibility = "visible";
-
             that.components[next].element.style.top = 0;
             that.components[next].element.style.left = 0;
             that.components[next].element.style.opacity = op;
@@ -2379,7 +2388,6 @@ require("./DisplayBase");
             if (this.fade === false) {
                 this.components[prev].element.style.visibility = "hidden";
                 this.components[next].element.style.visibility = "visible";
-
                 this.components[next].element.style.opacity = 1;
                 this.components[next].element.style.filter = "alpha(opacity=100)";
                 this.components[next].element.style.top = 0;
@@ -2479,7 +2487,9 @@ require("./DisplayBase.js");
             t.element = document.createElement("li");
 
             t.element.setAttribute("name", t.name);
-
+            if (t.hidden === true) {
+                t.element.style.display = "none";
+            }
             if (t.class) {
                 if (Apoco.type["string"].check(t.class)) {
                     t.element.classList.add(t.class);
@@ -2507,14 +2517,21 @@ require("./DisplayBase.js");
             tablist.appendChild(t.element);
             return;
         },
-
-        update: function update(name) {
-            for (var i = 0; i < this.components.length; i++) {
-                if (this.components[i].name == name) {
-                    var p = this.components[i].name;
-                    break;
-                }
+        showTab: function showTab(name) {
+            var p = this.getChild(name);
+            if (p) {
+                p.element.style.display = "unset";
             }
+        },
+        hideTab: function hideTab(name) {
+            var p = this.getChild(name);
+            if (p) {
+                p.element.style.display = "none";
+            }
+        },
+        update: function update(name) {
+            var p = this.getChild(name);
+
             if (p) {
                 p.element.click();
             } else {
@@ -3838,6 +3855,7 @@ var Promise = require('es6-promise').Promise;
 
     Apoco.Utils.extend(StringArrayField, _Field);
 
+
     var ImageArrayField = function ImageArrayField(d, element) {
         var that = this,
             rc = true;
@@ -4626,7 +4644,7 @@ var Promise = require('es6-promise').Promise;
 
                             resolve(evt.target.result);
                             if (pb) {
-                                pb.textContent = "Uploaded " + file.name;
+                                pb.textContent = "Staged for upload " + file.name;
                             }
                         };
                     }(f[i]);
@@ -4677,6 +4695,9 @@ var Promise = require('es6-promise').Promise;
         reset: function reset() {
             this.clearFileList();
             this.clearPromises();
+            if (this.opts && this.opts.progressBar) {
+                this.opts.progressBar.innerHTML = "";
+            }
         }
 
     };
@@ -5641,7 +5662,7 @@ var Apoco = require('./declare').Apoco;
             s = document.createElement("strong");
             s.textContent = "Alert";
             np.appendChild(s);
-            s = document.createElement("span");
+            s = document.createElement("p");
             s.textContent = text;
             np.appendChild(s);
 
