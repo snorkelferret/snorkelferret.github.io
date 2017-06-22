@@ -64,6 +64,7 @@ require("./Fields");
             element: null,
             DOM: null,
             id: null,
+            hidden: false,
             components: []
         };
         var that = this,
@@ -281,6 +282,7 @@ require("./Fields");
                     return null;
                 }
             }
+
             return true;
         },
         isHidden: function isHidden() {
@@ -1177,8 +1179,6 @@ require("./Sort.js");
             return null;
         },
         getCol: function getCol(name) {
-            var index = -1,
-                col = new Array();
             if (name !== undefined) {
                 for (var i = 0; i < this.cols.length; i++) {
                     if (this.cols[i].name == name) {
@@ -1579,6 +1579,45 @@ require("./Sort.js");
         },
         deleteChildren: function deleteChildren() {
             this.deleteAll();
+        },
+        hideCol: function hideCol(name, state) {
+            var b,
+                current_state = false;
+            if (!name) {
+                throw new Error("Grid: hideCol needs a name");
+            }
+            if (!state) {
+                state = "toggle";
+            }
+
+            b = this.getColIndex(name);
+            if (!b) {
+                throw new Error("grid: hideCol cannot find column called " + name);
+            }
+            if (this.cols[b].element.classList.contains("hidden")) {
+                current_state = true;
+            }
+            if (state === current_state) {
+                return;
+            }
+            if (state === "toggle") {
+                state = current_state ? false : true;
+            }
+
+            for (var i = 0; i < this.grids.length; i++) {
+                if (state) {
+                    this.cols[b].element.classList.add("hidden");
+                } else {
+                    this.cols[b].element.classList.remove("hidden");
+                }
+                for (var j = 0; j < this.grids[i].rows.length; j++) {
+                    if (state) {
+                        this.grids[i].rows[j][name].element.classList.add("hidden");
+                    } else {
+                        this.grids[i].rows[j][name].element.classList.remove("hidden");
+                    }
+                }
+            }
         },
         deleteAll: function deleteAll() {
             var el, row;
@@ -2587,6 +2626,8 @@ require('./Utils');
 require("./Sort");
 require('./Types');
 require("./datepicker");
+require("./IO");
+
 var Promise = require('es6-promise').Promise;
 
 ;(function () {
@@ -3855,6 +3896,178 @@ var Promise = require('es6-promise').Promise;
 
     Apoco.Utils.extend(StringArrayField, _Field);
 
+    var FileField = function FileField(d, element) {
+        var that = this,
+            rc = true;
+        d.field = "FileField";
+        d.type = "file";
+        _Field.call(this, d, element);
+        if (!this.value) {
+            this.value = [];
+        }
+        if (!this.width) {
+            this.width = 400;
+        }
+        if (!this.height) {
+            this.height = 400;
+        }
+        if (this.editable !== false) {
+            if (!window.FileReader) {
+                Apoco.popup.dialog("Sorry No FileReader", "Your browser does not support the image reader");
+                throw new Error("No FileReader");
+            }
+            this.input = document.createElement("input");
+            this.input.type = "file";
+            if (this.required === true) {
+                this.input.required = true;
+            }
+            this.input.setAttribute("name", "files");
+            if (this.opts && this.opts.multiple !== false) {
+                this.input.setAttribute("multiple", "multiple");
+            }
+            this.element.appendChild(this.input);
+            this.input.addEventListener("change", function (e) {
+                rc = that._getFileSelect(e, that);
+                for (var i = 0; i < that._promises.length; i++) {
+                    that._promises[i].then(function (file) {
+                        that.addValue(file);
+                    }).catch(function (msg) {
+                        console.log("Apoco.field.fileReader Error " + msg);
+                    });
+                }
+            });
+        }
+        if (this.values > 0) {
+            if (!that.checkValue()) {
+                throw new Error("file must have a name");
+            }
+            for (var i = 0; i < this.value.length; i++) {
+                this.addValue(this.value[i]);
+            }
+        }
+        if (!rc) {
+            Apoco.popup["dialog"]("File Load Error", "One or more of the selected files is not a readable file");
+        }
+        if (this.action) {
+            this.action(this);
+        }
+        return this;
+    };
+    FileField.prototype = {
+        checkValue: function checkValue(v) {
+            var that = this,
+                ar = [];
+            if (v) {
+                ar.push(v);
+            } else {
+                ar = that.value;
+            }
+            for (var i = 0; i < ar.length; i++) {
+                if (!ar[i].name) {
+                    return false;
+                }
+                if (!ar[i].data) {
+                    return false;
+                }
+                if (!ar[i].type) {
+                    return false;
+                }
+            }
+            return true;
+        },
+        getValue: function getValue() {
+            return this.value;
+        },
+        getFileNames: function getFileNames() {
+            var that = this,
+                f = [];
+            for (var i = 0; i < that.value.length; i++) {
+                f[i] = that.value[i].name;
+            }
+            return f;
+        },
+        getPromises: function getPromises() {
+            return this._promises;
+        },
+        findFile: function findFile(name) {
+            var that = this;
+            for (var i = 0; i < that.value.length; i++) {
+                if (that.value[i].name === name) {
+                    if (that.value[i].object) {
+                        return that.value[i];
+                    }
+                }
+            }
+            return null;
+        },
+        hideFile: function hideFile(name) {
+            var that = this,
+                f;
+            f = that.findFile(name);
+            if (f && f.element) {
+                f.element.style.display = "none";
+            }
+        },
+        showFile: function showFile(name) {
+            var that = this,
+                f;
+            f = that.findFile(name);
+            if (f && f.element) {
+                f.element.style.display = "unset";
+            }
+        },
+        setValue: function setValue(v) {},
+        addValue: function addValue(v) {
+            var that = this;
+
+            if (!that.checkValue(v)) {
+                return null;
+            }
+            v.element = document.createElement("div");
+            if (that.resizable === true || v.resizable === true) {
+                v.element.classList.add("resizable");
+                console.log("adding resizable");
+            }
+            v.object = document.createElement("embed");
+            v.object.setAttribute("name", v.name);
+            v.object.setAttribute("type", v.type);
+            v.object.setAttribute("src", v.data);
+            v.object.setAttribute("scale", "tofit");
+            if (that.width) {
+                v.object.width = that.width;
+            }
+            if (that.height) {
+                v.object.height = that.height;
+            }
+            if (v.width) {
+                v.object.width = v.width;
+            }
+            if (v.height) {
+                v.object.height = v.height;
+            }
+
+            if (that.hideFiles === true || v.hidden === true) {
+                v.object.style.display = "none";
+            }
+            v.element.appendChild(v.object);
+
+            that.value.push(v);
+            that.element.appendChild(v.element);
+            return v;
+        },
+        _getFileSelect: function _getFileSelect(evt) {
+            var that = this,
+                rc = 0;
+            that._promises = [];
+
+            evt.stopPropagation();
+            var files = evt.target.files;
+            rc = Apoco.IO.getFiles(files, that);
+            return rc;
+        }
+    };
+
+    Apoco.Utils.extend(FileField, _Field);
 
     var ImageArrayField = function ImageArrayField(d, element) {
         var that = this,
@@ -3924,6 +4137,9 @@ var Promise = require('es6-promise').Promise;
                 };
             });
             return promise;
+        },
+        getValue: function getValue() {
+            return this.value;
         },
         _getImageFileSelect: function _getImageFileSelect(evt) {
             var that = this,
@@ -4020,9 +4236,6 @@ var Promise = require('es6-promise').Promise;
         },
         resetValue: function resetValue() {
             return;
-        },
-        getValue: function getValue() {
-            return this.value;
         },
         checkValue: function checkValue() {
             return true;
@@ -4206,6 +4419,14 @@ var Promise = require('es6-promise').Promise;
                 n.push(k);
             }return n;
         },
+        fileReader: function fileReader(options, element) {
+            return new FileField(options, element);
+        },
+        fileReaderMethods: function fileReaderMethods() {
+            var n = [];for (var k in FileField.prototype) {
+                n.push(k);
+            }return n;
+        },
         date: function date(options, element) {
             return new DateField(options, element);
         },
@@ -4297,7 +4518,7 @@ var Promise = require('es6-promise').Promise;
     };
 })();
 
-},{"./Sort":14,"./Types":15,"./Utils":16,"./datepicker":18,"./declare":19,"es6-promise":43}],10:[function(require,module,exports){
+},{"./IO":10,"./Sort":14,"./Types":15,"./Utils":16,"./datepicker":18,"./declare":19,"es6-promise":43}],10:[function(require,module,exports){
 'use strict';
 
 var Apoco = require('./declare').Apoco;
@@ -4371,7 +4592,8 @@ var Promise = require('es6-promise').Promise;
         },
 
         REST: function REST(type, options, data) {
-            var defaults = { dataType: 'json', mimeType: 'application/json' };
+            var defaults = { dataType: 'json',
+                mimeType: 'application/json' };
             if (UI && UI.URL) {
                 defaults.url = UI.URL;
             } else {
@@ -4418,11 +4640,14 @@ var Promise = require('es6-promise').Promise;
                 request.onreadystatechange = stateChange;
                 request.open(type, settings.url);
                 request.addEventListener('error', reqFail);
-                if (type === "POST" || type === "PUT") {
-                    request.setRequestHeader("Content-Type", settings.mimeType);
-                    if (settings['X-Auth-Token']) {
-                        request.setRequestHeader("X-Auth-Token", settings['X-Auth-Token']);
+                for (var k in settings) {
+                    if (k === "mimeType") {
+                        request.setRequestHeader("Content-Type", settings.mimeType);
+                    } else if (k !== "url") {
+                        request.setRequestHeader(k, settings[k]);
                     }
+                }
+                if (type === "POST" || type === "PUT") {
                     console.log("PUT request %j", request);
                     request.send(data);
                 } else {
@@ -4432,7 +4657,80 @@ var Promise = require('es6-promise').Promise;
             });
 
             return promise;
+        },
+        getFiles: function getFiles(f, that, event) {
+            var promise,
+                found = false;
+            if (!that) {
+                throw new Error("getFiles: meeds options object");
+            }
+            if (!that._promises) {
+                that._promises = [];
+            }
+            if (!that._files) {
+                that._files = [];
+            }
+            for (var i = 0; i < f.length; i++) {
+                if (that.opts) {
+                    if (that.opts["maxSize"]) {
+                        if (f[i].size > that.opts.maxSize) {
+                            Apoco.popup.dialog("File too large", "File " + f[i].name + "exceeds the maximum allowable file size");
+                            continue;
+                        }
+                    }
+                    found = true;
+                    if (that.opts["mimeType"]) {
+                        found = false;
+                        for (var j = 0; j < that.opts["mimeType"].length; j++) {
+                            if (f[i].type === that.opts["mimeType"][j]) {
+
+                                found = true;
+                            }
+                        }
+                    }
+                    if (!found) {
+                        continue;
+                    }
+                }
+                if (!found) {
+                    Apoco.popup.dialog("File incorrect", "File " + f[i].name + " cannot be uploaded");
+                }
+
+
+                promise = new Promise(function (resolve, reject) {
+                    var pb = null,
+                        pc,
+                        reader = new FileReader();
+                    reader.onerror = function (evt) {
+                        reject("DropZone Error " + evt.target.error.code);
+                    };
+                    if (that.opts && that.opts.progressBar) {
+                        reader.onprogress = function (evt) {
+                            that._doProgress(evt);
+                        };
+                        pb = that.opts.progressBar;
+                    }
+
+                    reader.onload = function (file) {
+                        return function (evt) {
+                            evt.stopPropagation();
+                            file.data = evt.target.result;
+
+                            that._files.push(file);
+                            resolve(file);
+                            if (pb) {
+                                pb.textContent = "Staged for upload " + file.name;
+                            }
+                        };
+                    }(f[i]);
+
+                    reader.readAsDataURL(f[i]);
+                });
+                that._promises.push(promise);
+            }
+            return that._promises;
         }
+
     };
 
     var _webSocket = function _webSocket(options, data) {
@@ -4557,8 +4855,6 @@ var Promise = require('es6-promise').Promise;
             }
         }
         element.addEventListener("dragover", function (e) {
-            console.log("in drop zone");
-
             if (!element.classList.contains("drop_zone")) {
                 element.classList.add("drop_zone");
             }
@@ -4566,20 +4862,14 @@ var Promise = require('es6-promise').Promise;
             e.stopPropagation();
         }, false);
         element.addEventListener("dragenter", function (e) {
-            console.log("enter drop zone");
-
             element.classList.add("drop_zone");
             e.stopPropagation();
         }, false);
         element.addEventListener("dragleave", function (e) {
-            console.log("leave drop zone");
-
             element.classList.remove("drop_zone");
             e.stopPropagation();
         }, false);
         element.addEventListener("drop", function (e) {
-            console.log("drop is here");
-
             element.classList.remove("drop_zone");
             e.preventDefault();
             e.stopPropagation();
@@ -4593,66 +4883,11 @@ var Promise = require('es6-promise').Promise;
         _files: [],
         _getFiles: function _getFiles(e) {
             var f,
-                that = this,
-                promise,
-                found;
+                that = this;
             e.stopPropagation();
             e.preventDefault();
             f = e.dataTransfer.files;
-            for (var i = 0; i < f.length; i++) {
-                if (that.opts) {
-                    if (that.opts["maxSize"]) {
-                        if (f[i].size > that.opts.maxSize) {
-                            Apoco.popup.dialog("File too large", "File " + f[i].name + "exceeds the maximum allowable file size");
-                            continue;
-                        }
-                    }
-                    found = true;
-                    if (that.opts["mimeType"]) {
-                        found = false;
-                        for (var j = 0; j < that.opts["mimeType"].length; j++) {
-                            if (f[i].type === that.opts["mimeType"][j]) {
-                                found = true;
-                            }
-                        }
-                    }
-                    if (!found) {
-                        continue;
-                    }
-                }
-
-
-                promise = new Promise(function (resolve, reject) {
-                    var pb = null,
-                        pc,
-                        reader = new FileReader();
-                    reader.onerror = function (evt) {
-                        reject("DropZone Error " + evt.target.error.code);
-                    };
-                    if (that.opts && that.opts.progressBar) {
-                        reader.onprogress = function (that) {
-                            return that._doProgress(e);
-                        }(that);
-                        pb = that.opts.progressBar;
-                    }
-
-                    reader.onload = function (file) {
-                        return function (evt) {
-                            evt.stopPropagation();
-
-                            that._files.push(evt.target.result);
-
-                            resolve(evt.target.result);
-                            if (pb) {
-                                pb.textContent = "Staged for upload " + file.name;
-                            }
-                        };
-                    }(f[i]);
-
-                    reader.readAsDataURL(f[i]);
-                });
-                that._promises.push(promise);
-            }
+            Apoco.IO.getFiles(f, that, e);
             if (this.opts["action"]) {
                 this.opts.action(this._promises);
             }
@@ -4727,7 +4962,11 @@ require("./Types.js");
         for (var k in d) {
             this[k] = d[k];
         }
-        _getNode[d.node](this);
+        if (_getNode[d.node]) {
+            _getNode[d.node](this);
+        } else {
+            throw new Error("Node: no node called " + d.node + " exists");
+        }
         if (element !== undefined) {
             p = element;
         } else {
@@ -4934,11 +5173,19 @@ require("./Types.js");
         clock: function clock(that) {
             that.element = document.createElement("div");
             that.element.classList.add("apoco_clock");
+            if (that.timer) {
+                that.timer = null;
+            }
             var cb = function cb(t) {
                 var d = new Date();
-                that.element.textContent = d.toLocaleTimeString();
+                if (!t.element) {
+                    window.clearInterval(t.timer);
+                    return;
+                }
+
+                t.element.textContent = d.toLocaleTimeString();
             };
-            window.setInterval(function () {
+            that.timer = window.setInterval(function () {
                 cb(that);
             }, 1000);
         },
@@ -6090,6 +6337,9 @@ var Apoco = require('./declare').Apoco;
             html_type: "file",
             field: "input",
             check: function check(s) {
+                if (Apoco.type.blank.check(s)) {
+                    return false;
+                }
                 return true;
             } },
         float: {
