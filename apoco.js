@@ -193,7 +193,7 @@ require("./Fields");
         deleteChildren: function deleteChildren() {
             for (var i = 0; i < this.components.length; i++) {
                 if (this.components[i].listen) {
-                    Apoco.unsubscribe(this.components[i]);
+                    Apoco.IO.unsubscribe(this.components[i]);
                 }
                 this.components[i].element.parentNode.removeChild(this.components[i].element);
             }
@@ -3387,6 +3387,7 @@ var Promise = require('es6-promise').Promise;
         var i,
             o,
             that = this,
+            opt_type,
             select_el;
         d.field = "select";
         d.type = "string";
@@ -3395,10 +3396,25 @@ var Promise = require('es6-promise').Promise;
         if (this.required === true) {
             select_el.required = true;
         }
+
+        if (this.options) {
+            if (Apoco.type["stringArray"].check(this.options)) {
+                opt_type = "stringArray";
+            } else if (Apoco.type["objectArray"].check(this.options)) {
+                opt_type = "objectArray";
+            } else {
+                throw new Error("select field- options must be string array or object array with two keys: value and label");
+            }
+        }
         for (i = 0; i < this.options.length; i++) {
             o = document.createElement("option");
-            o.value = this.options[i];
-            o.textContent = this.options[i];
+            if (opt_type === "stringArray") {
+                o.value = this.options[i];
+                o.textContent = this.options[i];
+            } else {
+                o.value = this.options[i].value;
+                o.textContent = this.options.label;
+            }
             select_el.appendChild(o);
         }
         if (this.blank_option === true) {
@@ -3464,19 +3480,53 @@ var Promise = require('es6-promise').Promise;
 
     SelectField.prototype = {
         setValue: function setValue(v) {
+            var value, name;
+            if (Apoco.type["string"].check(v)) {
+                name = v;
+                value = v;
+            } else if (Apoco.type["object"].check(v)) {
+                name = v.label;
+                value = v.value;
+                if (!name || !value) {
+                    throw new Error("select: setValue must have object with keys value and label");
+                }
+            } else {
+                throw new Error("select: setValue must be of type string or object");
+            }
             for (var i = 0; i < this.options.length; i++) {
-                if (this.options[i] == v) {
-                    this.select.value = v;
-                    this.value = v;
+                if (this.options[i] == name) {
+                    this.select.value = value;
+                    this.value = value;
                     return;
                 }
             }
             if (this.input) {
-                this.input.value = v;
-                this.value = v;
+                this.input.value = value;
+                this.value = value;
                 return;
             }
             throw new Error("SelectField: Cannot set value to " + v);
+        },
+        addValue: function addValue(v) {
+            var o,
+                a = [];
+            if (!v) {
+                return;
+            }
+            if (Apoco.type["string"].check(v) || Apoco.type["object"].check(v)) {
+                a.push(v);
+            } else if (Apoco.type["array"].check(v)) {
+                a = v;
+            } else {
+                throw new Error("select field - addValue needs a string, object,stringArray or objectArray");
+            }
+            for (var i = 0; i < a.length; i++) {
+                this.options.push(a[i]);
+                o = document.createElement("option");
+                a[i].value ? o.value = a[i].value : o.value = a[i];
+                a[i].label ? o.textContent = a[i].label : o.textContent = a[i];
+                this.select.appendChild(o);
+            }
         },
         getValue: function getValue() {
 
