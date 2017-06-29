@@ -5713,12 +5713,18 @@ require("./Window");
 
             return display_object;
         },
-        deleteChildren: function deleteChildren() {
+        deleteChildren: function deleteChildren(child_array) {
             if (!this.components) {
                 throw new Error("Panel: has no children " + this.name);
             }
-            for (var i = 0; i < this.components.length; i++) {
 
+            if (child_array && Apoco.type["array"].check(child_array)) {
+                for (var i = 0; i < child_array.length; i++) {
+                    this.deleteChild(child_array[i]);
+                }
+                return;
+            }
+            for (var i = 0; i < this.components.length; i++) {
                 this.components[i].delete("message from parent");
             }
             this.components.length = 0;
@@ -5728,12 +5734,15 @@ require("./Window");
             if (!obj) {
                 throw new Error("Apoco.Panel: deleteChild obj is null");
             }
-            if (Apoco.type['string'].check(obj)) {
+
+            if (!Apoco.type['object'].check(obj)) {
                 obj = this.getChild(obj);
             }
+
             for (var i = 0; i < this.components.length; i++) {
                 if (obj === this.components[i]) {
                     index = i;
+
                     break;
                 }
             }
@@ -5741,7 +5750,7 @@ require("./Window");
                 this.components[index].delete("message from parent");
                 this.components.splice(index, 1);
             } else {
-                throw new Error("Panel: deleteChild could not find child " + obj.id);
+                throw new Error("Panel: deleteChild could not find child " + obj);
             }
         },
         getChildren: function getChildren() {
