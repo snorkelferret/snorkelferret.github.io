@@ -2638,7 +2638,8 @@ var Promise = require('es6-promise').Promise;
             required: false,
             editable: true,
             type: "any",
-            value: null
+            value: null,
+            hidden: false
         };
         if (!d) {
             throw new Error("Field: must have some options");
@@ -2695,7 +2696,9 @@ var Promise = require('es6-promise').Promise;
             l.appendChild(document.createTextNode(this.label));
             this.element.appendChild(l);
         }
-
+        if (this.hidden) {
+            this.hide();
+        }
         if (this.publish !== undefined) {
             Apoco.IO.publish(this);
         }
@@ -2727,6 +2730,16 @@ var Promise = require('es6-promise').Promise;
                 return k;
             }
             return null;
+        },
+        hide: function hide() {
+            this.hidden = true;
+
+            this.element.style.display = "none";
+        },
+        show: function show() {
+            this.hidden = false;
+
+            this.element.style.display = "unset";
         },
         getValue: function getValue() {
             if (this.input.pending) {
@@ -5031,7 +5044,9 @@ require("./Types.js");
                 }
             }
         }
-
+        if (this.hidden) {
+            this.hide();
+        }
         if (this.id) {
             this.element.id = this.id;
         }
@@ -5060,6 +5075,14 @@ require("./Types.js");
                 default:
                     throw new Error("Cannot set text of " + this.node);
             }
+        },
+        show: function show() {
+            this.hidden = false;
+            this.element.style.display = "unset";
+        },
+        hide: function hide() {
+            this.hidden = true;
+            this.element.style.display = "none";
         }
     };
 
