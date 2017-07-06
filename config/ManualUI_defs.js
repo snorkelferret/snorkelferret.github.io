@@ -265,6 +265,8 @@ var UI={};
                           descriptions:[""]
                         },
                 fileReader:{ options:{ type:{type:"string",default: "file"},
+                                       opts:{type: "key value object",default: undefined,
+                                             descriptions:["maxSize type: integer, max filesize in bytes","mimeTypes: an array of strings of valid mimetypes","see the IO getFiles","e.g <code> var my_display=Apoco.field['fileReader']({name:'someName',opts:{maxSize:1024,mimeTypes:['application/pdf','image/png']}});</code> "]},
                                        hideFiles:{type:"boolean",default: false},
                                        resizable:{type: "boolean",default: false},
                                        width:{type:"integer",default: 400,description:"width of the file object"},
@@ -1395,7 +1397,7 @@ var UI={};
         var HPopups=HThings["Popups"];
 
         var command={
-            alert:  function(c){ return c.concat('("Hi, An alert");');},
+            alert:  function(c){ return c.concat('("title","Hi, An alert");');},
             dialog:function(c){return c.concat('("title","my message");');},
             error:function(c){return c.concat('("title","my message");');},
          /*   paginate:function(c){return c.concat('({DOM:"right",values:[{text:"1",action:function(that){alert("got a click");}},{text:"2",action:function(that){alert("got a click");}}]});');},
@@ -1430,9 +1432,12 @@ var UI={};
                         usage: "<code>Apoco.popup['statusCode'][ERROR_CODE](text); </code>",
                         ret: "none"
                        },
-            alert:{items:[{label:"text",description:"type: string, required: false "}],
-                   cmd:  function(c){ return c.concat('("Hi, An alert");');},
-                   usage:" <code>Apoco.popup['alert'](title);</code>",
+            alert:{items:[{label:"title",description:"type: string, required: false "},
+                          {label:"text",description:"type: string, required: false "},
+                          {label:"time",description:"type: integer, required: false, time in milliseconds "}
+                         ],
+                   cmd:  function(c){ return c.concat('("title","Hi, An alert");');},
+                   usage:" <code>Apoco.popup['alert'](title,text,[time]);</code>",
                    ret: "HTML Element Object"
                   },
             dialog:{items:[{label:"title",description:"type: string, required: true"},
@@ -1547,7 +1552,7 @@ var UI={};
                          des: "unsubscibe from all messages defined in object.listen"
                         },
             webSocket:{code: "<code>var s=Apoco.IO.webSocket(settings);</code>",
-                       items:[{label:"settings",descriptions:["key value object","default={url:'.'}; ","any other settings in options will be passed to the webSocket"]},
+                       items:[{label:"settings",descriptions:["key value object","settings={url:'.',errorCallback:function(event){console.log('got error')}}; ","url defaults to UI.url if it exists","if no errorCallback function- defaults to throwing an Error","any other settings in options will be passed to the webSocket","optionally add am error callback function"]},
                              ],
                        ret: "object",
                        des: "sends and receives messages, received messages are sent with IO.dispatch",
@@ -1563,7 +1568,7 @@ var UI={};
                        items:[{label:"file_array",
                                description:"an array of files - typically returned by event.dataTransfer.files or event.target.files etc "},
                               {label:"object",
-                               descriptions:["<b>object</b><br> <code> var object={opts:{maxSize:integer_bytes,<br> mimeType:'/application/json', // any type of valid mimeType<br> action:function(promises){// passes the array of promises} },<br> progressBar: html_div_element }<code>}","Creates an array of _promises and _files (if they do not already exist) otherwise pushes to the arrays"]
+                               descriptions:["<b>object</b><br> <code> var object={opts:{maxSize:integer_bytes,<br> mimeType:'/application/json', // any type of valid mimeType<br> action:function(promises){// passes the array of promises} },<br> progressBar: html_div_element }<code>}","Creates an array of _promises and _files (if they do not already exist) otherwise pushes to the arrays","if there are errors - error messages are put in that._errors   (an array of strings)"]
                               }
                                
                               
