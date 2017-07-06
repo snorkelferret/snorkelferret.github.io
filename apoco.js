@@ -113,6 +113,19 @@ require("./Fields");
                 context.action(context);
             }
         };
+        this.element = document.createElement("div");
+        this.element.id = this.id;
+
+        this.element.classList.add("apoco_" + this.display);
+        if (this.class) {
+            if (Apoco.type["string"].check(this.class)) {
+                this.element.classList.add(this.class);
+            } else {
+                for (var i = 0; i < this.class.length; i++) {
+                    this.element.classList.add(this.class[i]);
+                }
+            }
+        }
 
         if (this.action) {
             if (!this.dependsOn) {
@@ -127,20 +140,6 @@ require("./Fields");
                 var b = document.body;
                 Apoco.Observer.observe(b, { childList: true, subtree: true, attributes: true, attributeFilter: ["id"] });
                 Apoco.Utils.observer.add(this.dependsOn, doit, this);
-            }
-        }
-
-        this.element = document.createElement("div");
-        this.element.id = this.id;
-
-        this.element.classList.add("apoco_" + this.display);
-        if (this.class) {
-            if (Apoco.type["string"].check(this.class)) {
-                this.element.classList.add(this.class);
-            } else {
-                for (var i = 0; i < this.class.length; i++) {
-                    this.element.classList.add(this.class[i]);
-                }
             }
         }
 
@@ -3667,6 +3666,9 @@ var Promise = require('es6-promise').Promise;
         },
         setValue: function setValue(value, index) {
             var t = 0;
+            if (!value) {
+                throw new Error("ButtonSet:setValue needs a value - got " + value);
+            }
             if (!Apoco.type["array"].check(value)) {
                 if (index !== undefined && index <= this.input.length) {
                     if (this.checkbox !== true) {
@@ -3965,15 +3967,25 @@ var Promise = require('es6-promise').Promise;
         d.field = "FileField";
         d.type = "file";
         _Field.call(this, d, element);
+
         if (!this.value) {
             this.value = [];
         }
-        if (!this.width) {
-            this.width = 400;
+        if (this.width) {
+            if (!isNaN(this.width)) {
+                this.width = this.width + "px";
+            }
+        } else {
+            this.width = "400px";
         }
-        if (!this.height) {
-            this.height = 400;
+        if (this.height) {
+            if (!isNaN(this.height)) {
+                this.height = this.height + "px";
+            }
+        } else {
+            this.height = "400px";
         }
+
         if (this.editable !== false) {
             if (!window.FileReader) {
                 Apoco.popup.dialog("Sorry No FileReader", "Your browser does not support the image reader");
@@ -4588,6 +4600,7 @@ var Apoco = require('./declare').Apoco;
 var Promise = require('es6-promise').Promise;
 
 ;(function () {
+
     'use strict';
 
     Apoco.IO = {
@@ -4730,14 +4743,18 @@ var Promise = require('es6-promise').Promise;
             if (!that._promises) {
                 that._promises = [];
             }
+            if (!that._errors) {
+                that._errors = [];
+            }
             if (!that._files) {
                 that._files = [];
             }
+
             for (var i = 0; i < f.length; i++) {
                 if (that.opts) {
                     if (that.opts["maxSize"]) {
                         if (f[i].size > that.opts.maxSize) {
-                            Apoco.popup.dialog("File too large", "File " + f[i].name + "exceeds the maximum allowable file size");
+                            that._errors.push("File too large" + f[i].name + "exceeds the maximum allowable file size");
                             continue;
                         }
                     }
@@ -4746,19 +4763,17 @@ var Promise = require('es6-promise').Promise;
                         found = false;
                         for (var j = 0; j < that.opts["mimeType"].length; j++) {
                             if (f[i].type === that.opts["mimeType"][j]) {
-
                                 found = true;
                             }
+                        }
+                        if (!found) {
+                            that._errors.push("File incorrect type " + f[i].name + " cannot be uploaded");
                         }
                     }
                     if (!found) {
                         continue;
                     }
                 }
-                if (!found) {
-                    Apoco.popup.dialog("File incorrect", "File " + f[i].name + " cannot be uploaded");
-                }
-
 
                 promise = new Promise(function (resolve, reject) {
                     var pb = null,
@@ -4782,6 +4797,7 @@ var Promise = require('es6-promise').Promise;
                             that._files.push(file);
                             resolve(file);
                             if (pb) {
+                                pb.style.width = 100 + '%';
                                 pb.textContent = "Staged for upload " + file.name;
                             }
                         };
@@ -4813,13 +4829,21 @@ var Promise = require('es6-promise').Promise;
         that.init();
 
         this.socket.onerror = function (e) {
-            Apoco.popup.error("webSocket", "Received an error msg");
+            if (that.settings.errorCallback) {
+                that.settings.errorCallback(e);
+            } else {
+                Apoco.popup.error("webSocket", "Received an error msg");
+            }
         };
         this.socket.onclose = function (e) {
-            if (e.code !== 1000) {
-                Apoco.popup.error("webSocket abnormal termination", "Exiting with code" + e.code);
-            }
             this.socket = null;
+            if (e.code !== 1000) {
+                if (that.settings.errorCallback) {
+                    that.settings.errorCallback(e);
+                } else {
+                    throw new Error("webSocket abnormal termination Exiting with code" + e.code);
+                }
+            }
         };
         this.socket.onmessage = function (e) {
             if (!e.data) {
@@ -4827,11 +4851,11 @@ var Promise = require('es6-promise').Promise;
             }
             var d = JSON.parse(e.data);
 
-
+            if (d[0] === "error") {
+                throw new Error("socker on messagr got error " + JSON.stringify(d[0]));
+            }
             if (that.corking) {
                 that.buffer.push(d);
-            } else if (d[0] === "error") {
-                Apoco.popup.dialog("Error", JSON.stringify(d[1]));
             } else {
                 Apoco.IO.dispatch(d[0], d[1]);
             }
@@ -4851,7 +4875,6 @@ var Promise = require('es6-promise').Promise;
 
                 try {
                     that.socket = new WebSocket(a + "//" + window.location.host + that.settings.url);
-                    that.socket.onopen = function (e) {};
                 } catch (err) {
                     throw new Error("webSocket: failed to open" + err);
                 }
@@ -4865,13 +4888,18 @@ var Promise = require('es6-promise').Promise;
 
             var msg = JSON.stringify(data);
 
-            if (!that.socket) {
-                that.init();
-            }
-            try {
-                that.socket.send(msg + '\n');
-            } catch (err) {
-                Apoco.popup.error("websocket send", ("Could not send websocket message %j ", err));
+            if (that.socket.readyState !== 1) {
+                var wait = function wait(event) {
+                    that.socket.send(msg + '\n');
+                    that.socket.removeEventListener('open', wait);
+                };
+                that.socket.addEventListener('open', wait, false);
+            } else {
+                try {
+                    that.socket.send(msg + '\n');
+                } catch (err) {
+                    Apoco.popup.error("websocket send", ("Could not send websocket message %j ", err));
+                }
             }
         },
         cork: function cork(on) {
@@ -4993,6 +5021,7 @@ var Promise = require('es6-promise').Promise;
         reset: function reset() {
             this.clearFileList();
             this.clearPromises();
+            this._errors = [];
             if (this.opts && this.opts.progressBar) {
                 this.opts.progressBar.innerHTML = "";
             }
@@ -5867,7 +5896,7 @@ var Apoco = require('./declare').Apoco;
             var mkDialog = function mkDialog(title, message, modal) {
                 var Hdialog, message_text, title_text, Modal, draggable;
                 if (modal && Apoco.modal === undefined) {
-                    console.log("creating a modal ");
+                    console.log("creating a modal " + message);
                     Apoco.modal = document.createElement("div");
                     Apoco.modal.id = "Apoco_modal";
                 }
@@ -5977,7 +6006,7 @@ var Apoco = require('./declare').Apoco;
             }
             return spinner;
         },
-        alert: function alert(text, time) {
+        alert: function alert(title, text, time) {
             var nd, ns, np, s;
 
             nd = document.createElement("div");
@@ -5987,9 +6016,7 @@ var Apoco = require('./declare').Apoco;
             ns.classList.add("alert");
             np = document.createElement("p");
             s = document.createElement("span");
-            np.appendChild(s);
-            s = document.createElement("strong");
-            s.textContent = "Alert";
+            s.textContent = title;
             np.appendChild(s);
             s = document.createElement("p");
             s.textContent = text;
@@ -7112,7 +7139,7 @@ String.prototype.trim = String.prototype.trim || function trim() {
         },
 
         detectMobile: function detectMobile() {
-            if (navigator.userAgent.match(/Android/i) || navigator.userAgent.match(/iPhone/i) || navigator.userAgent.match(/BlackBerry/i) || navigator.userAgent.match(/IEMobile/i)) {
+            if (navigator.userAgent.match(/Android/i) || navigator.userAgent.match(/webOS/i) || navigator.userAgent.match(/iPhone/i) || navigator.userAgent.match(/Windows Phone/i) || navigator.userAgent.match(/BlackBerry/i) || navigator.userAgent.match(/IEMobile/i)) {
                 return true;
             } else {
                 return false;
