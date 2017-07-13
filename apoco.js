@@ -514,8 +514,14 @@ require("./DisplayFieldset");
                 h.textContent = this.label;
             }
             header.appendChild(h);
+            console.log("parent is " + that.parent.name);
             if (this.onSubmit) {
-                container.setAttribute("onSubmit", 'return function(){that.onSubmit(this); return false;}');
+
+                container.addEventListener("submit", function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    that.onSubmit(e);
+                });
             }
             if (this.attr && Apoco.type["objectArray"].check(this.attr)) {
                 for (var i = 0; i < this.attr.length; i++) {
@@ -4901,6 +4907,9 @@ var Promise = require('es6-promise').Promise;
                 } else {
                     throw new Error("webSocket abnormal termination Exiting with code" + e.code);
                 }
+            }
+            if (that.settings.closeCallback) {
+                that.settings.closeCallback(e);
             }
         };
         this.socket.onmessage = function (e) {
