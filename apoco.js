@@ -514,7 +514,7 @@ require("./DisplayFieldset");
                 h.textContent = this.label;
             }
             header.appendChild(h);
-            console.log("parent is " + that.parent.name);
+
             if (this.onSubmit) {
 
                 container.addEventListener("submit", function (e) {
@@ -1654,7 +1654,7 @@ require("./Sort.js");
             }
 
             b = this.getColIndex(name);
-            if (!b) {
+            if (b === null) {
                 throw new Error("grid: hideCol cannot find column called " + name);
             }
             if (this.cols[b].element.classList.contains("hidden")) {
@@ -2805,9 +2805,6 @@ var Promise = require('es6-promise').Promise;
             this.element.style.display = "unset";
         },
         getValue: function getValue() {
-            if (this.input.pending) {
-                return null;
-            }
             var v = this.input.value;
             if (v && v.length > 0) {
                 return this.input.value;
@@ -4685,6 +4682,9 @@ var Promise = require('es6-promise').Promise;
             }
         },
         listen: function listen(that) {
+            var t,
+                found = false;
+
             if (that === undefined || that.listen === undefined) {
                 throw new Error("IO.listen needs an object");
             }
@@ -4694,16 +4694,31 @@ var Promise = require('es6-promise').Promise;
                 if (!this._subscribers[n]) {
                     this._subscribers[n] = [];
                 }
-                this._subscribers[n].push({ context: that, action: that.listen[i].action });
+
+                found = false;
+                if (this._subscribers[n]) {
+                    for (var j = 0; j < this._subscribers[n].length; j++) {
+                        t = this._subscribers[n][j];
+
+                        if (t.context == that && t.action == that.listen[i].action) {
+                            found = true;
+                        }
+                    }
+                }
+                if (!found) {
+                    this._subscribers[n].push({ context: that, action: that.listen[i].action });
+                }
             }
         },
-        unsubscribe: function unsubscribe(that) {
+        unsubscribe: function unsubscribe(that, name) {
 
             for (var i = 0; i < that.listen.length; i++) {
-                if (this._subscribers[that.listen[i].name]) {
-                    for (var j = 0; j < this._subscribers[that.listen[i].name].length; j++) {
-                        if (this._subscribers[that.listen[i].name][j]["context"].action === that.action) {
-                            this._subscribers[that.listen[i].name].splice(j, 1);
+                if (name && that.listen[i].name === name) {
+                    if (this._subscribers[that.listen[i].name]) {
+                        for (var j = 0; j < this._subscribers[that.listen[i].name].length; j++) {
+                            if (this._subscribers[that.listen[i].name][j]["context"].action === that.action) {
+                                this._subscribers[that.listen[i].name].splice(j, 1);
+                            }
                         }
                     }
                 }
