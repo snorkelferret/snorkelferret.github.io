@@ -432,6 +432,14 @@ require("./Nodes.js");
             }
             return js;
         },
+        reset: function reset() {
+            var c = this.components;
+            for (var i = 0; i < this.components.length; i++) {
+                if (this.components[i].field) {
+                    this.components[i].resetValue();
+                }
+            }
+        },
         check: function check() {
             var valid = true;
             for (var i = 0; i < this.components.length; i++) {
@@ -2812,19 +2820,14 @@ var Promise = require('es6-promise').Promise;
             return null;
         },
         setValue: function setValue(v) {
-            if (!Apoco.type[this.type].check(v)) {
-                throw new Error("Field: setValue " + v + " is the wrong type, expects " + this.type);
-            }
-            this.value = v;
-            if (this.value === null) {
+            if (v === null || v === undefined) {
                 this.input.value = "";
+            } else if (!Apoco.type[this.type].check(v)) {
+                throw new Error("Field: setValue " + v + " is the wrong type, expects " + this.type);
             } else {
                 this.input.value = v;
             }
-            if (this.input.pending) {
-                this.input.classList.remove("pending");
-                this.input.pending = false;
-            }
+            this.value = v;
         },
         delete: function _delete() {
             while (this.element.lastChild) {
