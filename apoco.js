@@ -4684,7 +4684,7 @@ var Promise = require('es6-promise').Promise;
                 }
             }
         },
-        listen: function listen(that) {
+        listen: function listen(that, name) {
             var t,
                 found = false;
 
@@ -4709,18 +4709,23 @@ var Promise = require('es6-promise').Promise;
                     }
                 }
                 if (!found) {
-                    this._subscribers[n].push({ context: that, action: that.listen[i].action });
+                    if (name === undefined || name === n) {
+                        this._subscribers[n].push({ context: that, action: that.listen[i].action });
+                    }
                 }
             }
         },
         unsubscribe: function unsubscribe(that, name) {
+            var n;
 
             for (var i = 0; i < that.listen.length; i++) {
-                if (name && that.listen[i].name === name) {
-                    if (this._subscribers[that.listen[i].name]) {
-                        for (var j = 0; j < this._subscribers[that.listen[i].name].length; j++) {
-                            if (this._subscribers[that.listen[i].name][j]["context"].action === that.action) {
-                                this._subscribers[that.listen[i].name].splice(j, 1);
+                n = that.listen[i].name;
+
+                if (this._subscribers[n]) {
+                    for (var j = 0; j < this._subscribers[n].length; j++) {
+                        if (this._subscribers[n][j]["context"].action === that.action) {
+                            if (name === undefined || name === n) {
+                                this._subscribers[n].splice(j, 1);
                             }
                         }
                     }
