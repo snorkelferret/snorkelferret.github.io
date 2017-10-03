@@ -57,7 +57,6 @@ require("./Fields");
 
     Apoco.display = {};
 
-    var dp;
     Apoco._DisplayBase = function (options, win) {
         var defaults = {
             parent: null,
@@ -87,34 +86,27 @@ require("./Fields");
             throw new Error(this.display + ": Must supply a unique id string");
         }
 
-        if (win) {
-            this.DOM = win.document.getElementById(this.DOM);
-            t = win.document.getElementById(this.id);
-            if (this.dependsOn) {
-                dp = win.document.getElementById(this.dependsOn);
-            }
-        } else {
-            t = document.getElementById(this.id);
-            this.DOM = document.getElementById(this.DOM);
-            if (this.dependsOn) {
-                dp = document.getElementById(this.dependsOn);
-            }
+        if (!win) {
+            win = window;
         }
+
+        this.DOM = win.document.getElementById(this.DOM);
+        t = win.document.getElementById(this.id);
+        if (this.dependsOn) {
+            dp = win.document.getElementById(this.dependsOn);
+        }
+
         if (!this.DOM) {
             throw new Error("_ApocoDisplayBase DOM element does not exist " + this.DOM);
         }
 
         if (t) {
             t.parentNode.removeChild(t);
+            this.element = t;
+        } else {
+            this.element = document.createElement("div");
+            this.element.id = this.id;
         }
-
-        var doit = function doit(context) {
-            if (context.action) {
-                context.action(context);
-            }
-        };
-        this.element = document.createElement("div");
-        this.element.id = this.id;
 
         this.element.classList.add("apoco_" + this.display);
         if (this.class) {
@@ -127,8 +119,14 @@ require("./Fields");
             }
         }
 
+        var doit = function doit(context) {
+            if (context.action) {
+                context.action(context);
+            }
+        };
+
         if (this.action) {
-            if (!this.dependsOn) {
+            if (!this.dependsOn || dp) {
                 this.action(this);
             } else if (!dp) {
                 if (!Apoco.Observer) {
@@ -1860,7 +1858,7 @@ require("./DisplayBase");
             if (this.selected) {
                 this.select(this.selected);
             } else {
-                this.selected = undefined;
+                this.selected = null;
             }
         },
         update: function update(name) {
@@ -4725,6 +4723,15 @@ var Promise = require('es6-promise').Promise;
                 }
             }
         },
+        getSubscribers: function getSubscribers(name) {
+            var p = [];
+            if (name && this._subscribers[name]) {
+                for (var i = 0; i < this._subscribers[name].length; i++) {
+                    p.push(this._subscribers[name][i].context);
+                }
+            }
+            return p;
+        },
         unsubscribe: function unsubscribe(that, name) {
             var n;
 
@@ -4948,7 +4955,7 @@ var Promise = require('es6-promise').Promise;
                         if (that.settings.errorCallback) {
                             that.settings.errorCallback(e);
                         } else {
-                            Apoco.popup.error("webSocket", "Received an error msg");
+                            Apoco.popup.error("webSocket", "Received an error msg %j", e);
                         }
                     };
                     this.socket.onclose = function (e) {
