@@ -102,11 +102,11 @@ require("./Fields");
 
         if (t) {
             t.parentNode.removeChild(t);
-            this.element = t;
-        } else {
-            this.element = document.createElement("div");
-            this.element.id = this.id;
         }
+
+        this.element = document.createElement("div");
+        this.element.id = this.id;
+
 
         this.element.classList.add("apoco_" + this.display);
         if (this.class) {
@@ -386,7 +386,7 @@ require("./Nodes.js");
             if (!parent_element) {
                 parent_element = this.element;
             }
-
+            d.parent = this;
             if (d.node) {
                 n = Apoco.node(d, el);
             } else if (d.field || d.type) {
@@ -402,7 +402,6 @@ require("./Nodes.js");
                 throw new Error("Apoco.displayFieldset: meed to specify node type or field");
             }
             if (n) {
-                n.parent = this;
                 p = n.element.parentNode;
                 if (p) {
                     parent_element.appendChild(p);
@@ -522,12 +521,13 @@ require("./DisplayFieldset");
             header.appendChild(h);
 
             if (this.onSubmit) {
-
-                container.addEventListener("submit", function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    that.onSubmit(e);
-                });
+                container.addEventListener("submit", function (self) {
+                    return function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        that.onSubmit(e, self);
+                    };
+                }(this), false);
             }
             if (this.attr && Apoco.type["objectArray"].check(this.attr)) {
                 for (var i = 0; i < this.attr.length; i++) {
@@ -1647,7 +1647,35 @@ require("./Sort.js");
             this.hideGrid(grid);
         },
         deleteChildren: function deleteChildren() {
-            this.deleteAll();
+            var el, row;
+            if (this.grids) {
+                for (var i = 0; i < this.grids.length; i++) {
+                    for (var j = 0; j < this.grids[i].rows.length; j++) {
+                        row = this.grids[i].rows[j];
+                        for (var k = 0; k < this.cols.length; k++) {
+                            el = row[this.cols[k].name].element;
+
+                            if (el && el.parentNode) {
+                                el.parentNode.removeChild(el);
+                            }
+                        }
+                    }
+                    this.grids[i].rows.length = 0;
+                    this.grids[i].element.parentNode.removeChild(this.grids[i].element);
+                }
+            }
+            if (this.colElement) {
+                for (var i = 0; i < this.cols.length; i++) {
+                    if (this.cols[i].element) {
+                        this.colElement.removeChild(this.cols[i].element);
+                    }
+                }
+                if (this.colElement.parentNode) {
+                    this.colElement.parentNode.removeChild(this.colElement);
+                }
+            }
+            this.cols.length = 0;
+            this.grids.length = 0;
         },
         hideCol: function hideCol(name, state) {
             var b,
@@ -1689,25 +1717,7 @@ require("./Sort.js");
             }
         },
         deleteAll: function deleteAll() {
-            var el, row;
-            if (this.grids) {
-                for (var i = 0; i < this.grids.length; i++) {
-                    for (var j = 0; j < this.grids[i].rows.length; j++) {
-                        row = this.grids[i].rows[j];
-                        for (var k = 0; k < this.cols.length; k++) {
-                            el = row[this.cols[k].name].element;
-
-                            if (el && el.parentNode) {
-                                el.parentNode.removeChild(el);
-                            }
-                        }
-                    }
-                    this.grids[i].rows.length = 0;
-                    this.grids[i].element.parentNode.removeChild(this.grids[i].element);
-                }
-                this.cols.length = 0;
-                this.grids.length = 0;
-            }
+            this.deleteChildren();
         },
         showGrid: function showGrid(name) {
             var g;
@@ -2793,6 +2803,9 @@ var Promise = require('es6-promise').Promise;
             }
             return null;
         },
+        getParent: function getParent() {
+            return this.parent;
+        },
         getKey: function getKey() {
             var k = this.name ? this.name : this.label;
             if (k) {
@@ -3499,6 +3512,11 @@ var Promise = require('es6-promise').Promise;
         this.select = select_el;
         if (this.blank_option) {
             this._mkBlankOption();
+        } else if (this.onChange) {
+            this.select.addEventListener("change", function (e) {
+                e.stopPropagation();
+                that.onChange(that);
+            });
         }
 
         if (this.value) {
@@ -3542,7 +3560,8 @@ var Promise = require('es6-promise').Promise;
                 that.input.addEventListener("keypress", cd);
             };
 
-            this.select.addEventListener("change", function () {
+            this.select.addEventListener("change", function (e) {
+                e.stopPropagation();
                 if (that.select.value === "") {
                     if (!that.input) {
                         mk_input();
@@ -3550,6 +3569,9 @@ var Promise = require('es6-promise').Promise;
                     that.select.style.visibility = "hidden";
                     that.input.style.visibility = "visible";
                     that.input.focus();
+                }
+                if (that.onChange) {
+                    that.onChange(that);
                 }
             });
         },
@@ -4421,10 +4443,6 @@ var Promise = require('es6-promise').Promise;
         box = document.createElement("div");
         box.classList.add(this.type, "apoco_autocomplete");
         this.element.appendChild(box);
-        var p = document.createElement("span");
-        p.classList.add("search");
-        p.innerHTML = "&#x26B2;";
-        box.appendChild(p);
         this.input = document.createElement("input");
         this.input.setAttribute("placeholder", "Search");
         if (this.required === true) {
@@ -4458,7 +4476,9 @@ var Promise = require('es6-promise').Promise;
                     that.select.style.visibility = "hidden";
                     break;
                 case "keypress":
+                    console.log("select got keypress");
                     pubsub = that.name + "_value_selected";
+                    break;
                 default:
                     return;
             }
@@ -4517,9 +4537,11 @@ var Promise = require('es6-promise').Promise;
                 n = [];
 
             item = item.toLowerCase();
+
             for (var i = 0; i < arr.length; i++) {
                 a = arr[i].toLowerCase();
-                if (arr[i].startsWith(item)) {
+
+                if (a.startsWith(item)) {
                     n[count] = arr[i];
                     count++;
                 }
@@ -5232,6 +5254,9 @@ require("./Types.js");
         getElement: function getElement() {
             return this.element;
         },
+        getParent: function getParent() {
+            return this.parent;
+        },
         setText: function setText(text) {
             switch (this.node) {
                 case "heading":
@@ -5340,7 +5365,11 @@ require("./Types.js");
             }
         },
         list: function list(that) {
-            that.element = document.createElement("ul");
+            if (that.ordered === true) {
+                that.element = document.createElement("ol");
+            } else {
+                that.element = document.createElement("ul");
+            }
             that.element.classList.add("list");
             for (var i = 0; i < that.list.length; i++) {
                 var l = that.list[i];
