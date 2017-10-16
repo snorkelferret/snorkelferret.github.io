@@ -110,13 +110,7 @@ require("./Fields");
 
         this.element.classList.add("apoco_" + this.display);
         if (this.class) {
-            if (Apoco.type["string"].check(this.class)) {
-                this.element.classList.add(this.class);
-            } else {
-                for (var i = 0; i < this.class.length; i++) {
-                    this.element.classList.add(this.class[i]);
-                }
-            }
+            Apoco.Utils.addClass(this.element, this.class);
         }
 
         var doit = function doit(context) {
@@ -2757,13 +2751,7 @@ var Promise = require('es6-promise').Promise;
         this.element.classList.add(this.type);
 
         if (this.class) {
-            if (Apoco.type["string"].check(this.class)) {
-                this.element.classList.add(this.class);
-            } else {
-                for (var i = 0; i < this.class.length; i++) {
-                    this.element.classList.add(this.class[i]);
-                }
-            }
+            Apoco.Utils.addClass(this.element, this.class);
         }
 
         this.element.setAttribute("name", this.name);
@@ -2919,6 +2907,9 @@ var Promise = require('es6-promise').Promise;
         d.field = "static";
         _Field.call(this, d, element);
         this.span = document.createElement("span");
+        if (this.childClass) {
+            Apoco.Utils.addClass(this.span, this.childClass);
+        }
 
         this.setValue(this.value);
         this.element.appendChild(this.span);
@@ -2966,9 +2957,13 @@ var Promise = require('es6-promise').Promise;
         var that = this;
         d.field = "input";
         _Field.call(this, d, element);
-        var s = document.createElement("input");
-        s.setAttribute("type", this.html_type);
-        this.input = s;
+        this.input = document.createElement("input");
+        this.input.setAttribute("type", this.html_type);
+
+        if (this.childClass) {
+            Apoco.Utils.addClass(this.input, this.childClass);
+        }
+
         if (this.min !== undefined) {
             this.input.setAttribute("min", this.min);
         }
@@ -3015,6 +3010,10 @@ var Promise = require('es6-promise').Promise;
         }
         var list = document.createElement("ul");
         list.classList.add('aligned_float');
+        if (this.childClass) {
+            Apoco.Utils.addClass(list, this.childClass);
+        }
+
         var el = document.createElement("li");
         var dec = document.createElement("div");
         dec.className = 'values';
@@ -3194,6 +3193,10 @@ var Promise = require('es6-promise').Promise;
         if (this.required === true) {
             this.input.required = true;
         }
+        if (this.childClass) {
+            Apoco.Utils.addClass(this.input, this.childClass);
+        }
+
         this.element.appendChild(this.input);
         if (this.value) {
             if (Apoco.type["integer"].check(this.value)) {
@@ -3236,6 +3239,10 @@ var Promise = require('es6-promise').Promise;
         if (this.required === true) {
             this.input.required = true;
         }
+        if (this.childClass) {
+            Apoco.Utils.addClass(this.input, this.childClass);
+        }
+
         this.element.appendChild(this.input);
         if (this.editable === false) {
             this.input.readOnly = true;
@@ -3256,6 +3263,9 @@ var Promise = require('es6-promise').Promise;
         this.input = document.createElement("input");
         this.input.setAttribute("type", this.html_type);
         this.input.className = "check_box";
+        if (this.childClass) {
+            Apoco.Utils.addClass(this.input, this.childClass);
+        }
 
         this.element.appendChild(this.input);
         if (this.required === true) {
@@ -3427,6 +3437,10 @@ var Promise = require('es6-promise').Promise;
         _Field.call(this, d, element);
         this.popup = true;
         this.input = document.createElement("textarea");
+        if (this.childClass) {
+            Apoco.Utils.addClass(this.input, this.childClass);
+        }
+
         if (this.required === true) {
             this.input.required = true;
         }
@@ -3474,16 +3488,17 @@ var Promise = require('es6-promise').Promise;
         var i,
             o,
             that = this,
-            opt_type,
-            select_el;
+            opt_type;
         d.field = "select";
         d.type = "string";
         _Field.call(this, d, element);
-        select_el = document.createElement("select");
+        this.select = document.createElement("select");
         if (this.required === true) {
-            select_el.required = true;
+            this.select.required = true;
         }
-
+        if (this.childClass) {
+            Apoco.Utils.addClass(this.select, this.childClass);
+        }
         if (this.options) {
             if (Apoco.type["stringArray"].check(this.options)) {
                 opt_type = "stringArray";
@@ -3502,14 +3517,14 @@ var Promise = require('es6-promise').Promise;
                 o.value = this.options[i].value;
                 o.textContent = this.options.label;
             }
-            select_el.appendChild(o);
+            this.select.appendChild(o);
         }
         if (this.blank_option === true) {
             o = document.createElement("option");
             o.value = "";
-            select_el.appendChild(o);
+            this.select.appendChild(o);
         }
-        this.select = select_el;
+
         if (this.blank_option) {
             this._mkBlankOption();
         } else if (this.onChange) {
@@ -3682,6 +3697,9 @@ var Promise = require('es6-promise').Promise;
         this.popup = true;
         var u = document.createElement("ul");
         u.className = "choice";
+        if (this.childClass) {
+            Apoco.Utils.addClass(u, this.childClass);
+        }
         this.element.appendChild(u);
 
         for (var i = 0; i < this.input.length; i++) {
@@ -3858,6 +3876,9 @@ var Promise = require('es6-promise').Promise;
         this.input = document.createElement("input");
         this.input.setAttribute("type", this.type);
         this.element.appendChild(this.input);
+        if (this.childClass) {
+            Apoco.Utils.addClass(this.input, this.childClass);
+        }
         var that = this;
         if (this.min) {
             this.input.setAttribute("min", this.min);
@@ -4087,6 +4108,9 @@ var Promise = require('es6-promise').Promise;
             }
             this.input = document.createElement("input");
             this.input.type = "file";
+            if (this.childClass) {
+                Apoco.Utils.addClass(this.input, this.childClass);
+            }
             if (this.required === true) {
                 this.input.required = true;
             }
@@ -4259,6 +4283,9 @@ var Promise = require('es6-promise').Promise;
                 throw new Error("No FileReader");
             }
             this.input = document.createElement("input");
+            if (this.childClass) {
+                Apoco.Utils.addClass(this.input, this.childClass);
+            }
             this.input.type = "file";
             if (this.required === true) {
                 this.input.required = true;
@@ -4447,6 +4474,9 @@ var Promise = require('es6-promise').Promise;
         this.input.setAttribute("placeholder", "Search");
         if (this.required === true) {
             this.input.required = true;
+        }
+        if (this.childClass) {
+            Apoco.Utils.addClass(this.input, this.childClass);
         }
         this.input.setAttribute("type", this.html_type);
         box.appendChild(this.input);
@@ -5228,13 +5258,10 @@ require("./Types.js");
             p = this.element;
         }
         if (this.class) {
-            if (Apoco.type["string"].check(this.class)) {
-                p.classList.add(this.class);
-            } else {
-                for (var i = 0; i < this.class.length; i++) {
-                    p.classList.add(this.class[i]);
-                }
-            }
+            Apoco.Utils.addClass(p, this.class);
+        }
+        if (this.childClass) {
+            Apoco.Utils.addClass(this.element, this.childClass);
         }
         if (this.hidden) {
             this.hide();
@@ -7015,6 +7042,23 @@ String.prototype.trim = String.prototype.trim || function trim() {
                 value += parseFloat(v[0]);
             }
             return value.toString() + units;
+        },
+        addClass: function addClass(element, cl) {
+            if (!element) {
+                throw new Error("addClass: requires an html element");
+            }
+            if (!cl === undefined) {
+                throw new Error("addClass: requires a class or an array of classes");
+            }
+            if (cl) {
+                if (Apoco.type["string"].check(cl)) {
+                    element.classList.add(cl);
+                } else {
+                    for (var i = 0; i < cl.length; i++) {
+                        element.classList.add(cl[i]);
+                    }
+                }
+            }
         },
         fontSizeToPixels: function fontSizeToPixels(font_size) {
             var p,
