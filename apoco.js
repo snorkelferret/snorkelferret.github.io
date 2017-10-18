@@ -68,7 +68,8 @@ require("./Fields");
         };
         var that = this,
             t,
-            dp;
+            dp,
+            td;
 
         for (var k in defaults) {
             if (options[k] === undefined) {
@@ -90,16 +91,19 @@ require("./Fields");
             win = window;
         }
 
-        this.DOM = win.document.getElementById(this.DOM);
+        if (this.DOM && this.DOM.id) {
+            console.log("Error not a string id " + this.DOM.id);
+        }
+        td = win.document.getElementById(this.DOM);
         t = win.document.getElementById(this.id);
         if (this.dependsOn) {
             dp = win.document.getElementById(this.dependsOn);
         }
 
-        if (!this.DOM) {
-            throw new Error("_ApocoDisplayBase DOM element does not exist " + this.DOM);
+        if (!td) {
+            throw new Error("_ApocoDisplayBase DOM must be the string id  of an existing html element " + this.DOM);
         }
-
+        this.DOM = td;
         if (t) {
             t.parentNode.removeChild(t);
         }
@@ -321,6 +325,7 @@ require("./Fields");
 var Apoco = require('./declare').Apoco;
 require("./DisplayBase.js");
 require("./Nodes.js");
+require("./Fields.js");
 
 ;(function () {
 
@@ -460,7 +465,7 @@ require("./Nodes.js");
     Apoco.display._fieldsetBase = ApocoMakeFieldset;
 })();
 
-},{"./DisplayBase.js":2,"./Nodes.js":11,"./declare":19}],4:[function(require,module,exports){
+},{"./DisplayBase.js":2,"./Fields.js":9,"./Nodes.js":11,"./declare":19}],4:[function(require,module,exports){
 "use strict";
 
 var Apoco = require('./declare').Apoco;
@@ -601,22 +606,26 @@ require("./DisplayFieldset");
             }
             n.parent = this;
             n.element = el;
+
             n.submit = document.createElement("input");
             n.submit.setAttribute("type", "submit");
             if (d.value) {
                 n.submit.setAttribute("value", d.value);
             }
             if (d.class) {
-                if (Apoco.type["array"].check(d.class)) {
-                    for (var i = 0; i < d.class.length; i++) {
-                        n.element.classList.add(d.class[i]);
-                    }
-                } else {
-                    n.element.classList.add(d.class);
-                }
+                Apoco.Utils.addClass(n.element, d.class);
+            }
+            if (d.childClass) {
+                Apoco.Utils.addClass(n.submit, d.childClass);
             }
             n.name = d.name;
             n.element.appendChild(n.submit);
+            n.element.addEventListener("click", function (that, n) {
+                return function (e) {
+                    e.stopPropagation();
+                    that.submitter = n;
+                };
+            }(this, n), false);
             parent_element.appendChild(n.element);
             this.components[index] = n;
 
@@ -5254,6 +5263,7 @@ require("./Types.js");
         }
         if (element !== undefined) {
             p = element;
+            this.root = p;
         } else {
             p = this.element;
         }
@@ -5300,11 +5310,19 @@ require("./Types.js");
         },
         show: function show() {
             this.hidden = false;
-            this.element.style.display = "unset";
+            if (this.root) {
+                this.root.style.display = "";
+            } else {
+                this.element.style.display = "";
+            }
         },
         hide: function hide() {
             this.hidden = true;
-            this.element.style.display = "none";
+            if (this.root) {
+                this.root.style.display = "none";
+            } else {
+                this.element.style.display = "none";
+            }
         }
     };
 
