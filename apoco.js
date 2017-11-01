@@ -1013,9 +1013,11 @@ require("./Sort.js");
             for (var j = 0; j < this.grids.length; j++) {
                 Apoco.sort(this.grids[j].rows, ar);
                 this.grids[j].sorted = true;
+                this.grids[j].reverse = false;
 
                 if (dir && dir === "down") {
                     this.grids[j].rows.reverse();
+                    this.grids[j].reverse = true;
                 }
             }
         },
@@ -1370,7 +1372,11 @@ require("./Sort.js");
                                 if (this.cols[k].name === this.sortOrder[i]) {
                                     if (this.cols[k].editable === false) {
                                         ci = c[j].getElementsByTagName("span");
-                                        key[this.sortOrder[i]] = ci[0].textContent;
+                                        if (ci[0].textContent === "") {
+                                            key[this.sortOrder[i]] = null;
+                                        } else {
+                                            key[this.sortOrder[i]] = ci[0].textContent;
+                                        }
                                         break;
                                     }
 
@@ -1545,13 +1551,26 @@ require("./Sort.js");
                         }
                     } else {
                         sortOrder = this.sortOrder;
-                        for (var j = 0; j < sortOrder.length; j++) {
-                            if (key[sortOrder[j]] === undefined || key[sortOrder[j]] === null) {
-                                throw new Error("getRow: key is not unique needs " + this.sortOrder[j]);
+                        if (this.uniqueKey) {
+                            for (var j = 0; j < this.uniqueKey.length; j++) {
+                                if (key[this.uniqueKey[j]] === undefined || key[this.uniqueKey[j]] === null) {
+                                    throw new Error("getRow: key is not unique needs " + this.uniqueKey[j]);
+                                }
+                            }
+                        } else {
+                            for (var j = 0; j < sortOrder.length; j++) {
+                                if (key[sortOrder[j]] === undefined || key[sortOrder[j]] === null) {
+                                    throw new Error("getRow: key is not unique needs " + sortOrder[j]);
+                                }
                             }
                         }
                     }
+                    if (grid[i].reverse) {
+                        grid[i].rows.reverse();
+                        grid[i].reverse = false;
+                    }
                     row = Apoco.Utils.binarySearch(grid[i].rows, sortOrder, key, closest);
+
                     if (row !== null) {
                         return row;
                     }
@@ -7133,7 +7152,6 @@ String.prototype.trim = String.prototype.trim || function trim() {
             var mid, r, compare;
             var len = arr.length;
 
-
             if (sort_order === null) {
                 compare = function compare(aa) {
                     if (aa == data) {
@@ -7143,22 +7161,33 @@ String.prototype.trim = String.prototype.trim || function trim() {
                     } else if (aa < data) {
                         return -1;
                     } else {
-                        throw new Error("binarySearch: should never get here");
+                        throw new Error("binarySearch: sorting on UniqueKey found a null value");
                     }
                 };
             } else {
                 compare = function compare(aa) {
-                    var field, item;
+                    var field, item, curr;
 
                     for (var i = 0; i < sort_order.length; i++) {
+
                         field = sort_order[i];
                         item = data[field];
+                        curr = aa[field].value;
 
-                        if (aa[field].value == item) {
+                        if (curr == item) {
                             continue;
-                        } else if (aa[field].value > item) {
+                        }
+                        if (item === "" || item === null) {
                             return 1;
-                        } else if (aa[field].value < item) {
+                        }
+                        if (curr === "" || curr === null) {
+                            return -1;
+                        }
+
+
+                        if (curr > item) {
+                            return 1;
+                        } else if (curr < item) {
                             return -1;
                         } else {
                             throw new Error("binarySearch: should never get here- trying to find " + JSON.stringify(item) + " field is " + field);
@@ -7178,15 +7207,18 @@ String.prototype.trim = String.prototype.trim || function trim() {
                 }
             }
             r = compare(arr[mid]);
+
             if (r < 0 && arr.length > 1) {
                 if (closest) {
                     closest.dir = "after";
                 }
+
                 return Apoco.Utils.binarySearch(arr.slice(mid, Number.MAX_VALUE), sort_order, data, closest);
             } else if (r > 0 && arr.length > 1) {
                 if (closest) {
                     closest.dir = "before";
                 }
+
                 return Apoco.Utils.binarySearch(arr.slice(0, mid), sort_order, data, closest);
             } else if (r === 0) {
                 return arr[mid];
