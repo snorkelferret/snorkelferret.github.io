@@ -381,6 +381,7 @@ require("./Fields.js");
             }
             if (el === undefined && this.display == "form") {
                 el = document.createElement("li");
+                parent_element = this.element.getElementsByTagName("ul")[0];
             }
             if (!parent_element) {
                 parent_element = this.element;
@@ -947,23 +948,22 @@ require("./Sort.js");
                 this.redrawRows();
             }
         },
-        _afterShow: function _afterShow() {
-            var v,
+        _calcWidth: function _calcWidth() {
+            var that = this,
+                v,
                 c,
                 width = 0,
                 d,
                 t;
-            var that = this;
 
-            if (!this.grids) {
-                return;
-            }
             v = that.element.getElementsByClassName("head")[0];
             if (v) {
-                c = v.getElementsByTagName("div");
-
+                c = v.children;
                 if (c) {
                     for (var i = 0; i < c.length; i++) {
+                        if (c[i].classList.contains("hidden")) {
+                            continue;
+                        }
                         d = window.getComputedStyle(c[i], null).getPropertyValue("width");
 
                         if (d.indexOf("px") >= 0) {
@@ -971,6 +971,7 @@ require("./Sort.js");
                         } else {
                             return;
                         }
+
                         width += parseFloat(t[0]);
                     }
 
@@ -980,10 +981,17 @@ require("./Sort.js");
                     }
                     v.style.width = width;
                 }
+            }
+        },
+        _afterShow: function _afterShow() {
+            var that = this;
 
+            if (!this.grids) {
+                return;
+            }
+            this._calcWidth();
+            if (!this.element.contains(this.grid_container)) {
                 this.element.appendChild(this.grid_container);
-            } else {
-                console.log("cannot find head element ");
             }
         },
         sort: function sort(dir) {
@@ -1735,6 +1743,7 @@ require("./Sort.js");
                     }
                 }
             }
+            this._calcWidth();
         },
         deleteAll: function deleteAll() {
             this.deleteChildren();
@@ -2759,9 +2768,8 @@ var Promise = require('es6-promise').Promise;
         for (var k in d) {
             this[k] = d[k];
         }
-        if (this.editable === false) {
-            this.popup = false;
-        }
+        this.editable === false ? this.popup = false : this.popup = true;
+
         if (Apoco.type[this.type]) {
             this.html_type = Apoco.type[this.type].html_type;
         } else {
@@ -3515,8 +3523,8 @@ var Promise = require('es6-promise').Promise;
     var SelectField = function SelectField(d, element) {
         var i,
             o,
-            that = this,
-            opt_type;
+            that = this;
+        this.opt_type = null;
         d.field = "select";
         d.type = "string";
         _Field.call(this, d, element);
@@ -3528,22 +3536,31 @@ var Promise = require('es6-promise').Promise;
             Apoco.Utils.addClass(this.select, this.childClass);
         }
         if (this.options) {
-            if (Apoco.type["stringArray"].check(this.options)) {
-                opt_type = "stringArray";
-            } else if (Apoco.type["objectArray"].check(this.options)) {
-                opt_type = "objectArray";
+            if (Apoco.type["objectArray"].check(this.options)) {
+                this.opt_type = "object";
+            } else if (Apoco.type["floatArray"].check(this.options)) {
+                this.opt_type = "float";
+            } else if (Apoco.type["integerArray"].check(this.options)) {
+                this.opt_type = "integer";
+            } else if (Apoco.type["enum"].check(this.options)) {
+                this.opt_type = "string";
+            } else if (Apoco.type["stringArray"].check(this.options)) {
+                this.opt_type = "string";
             } else {
-                throw new Error("select field- options must be string array or object array with two keys: value and label");
+                throw new Error("select field- options must be an array or object array with two keys: value and label");
             }
+        } else {
+            throw new Error("select field needs options set");
         }
+
         for (i = 0; i < this.options.length; i++) {
             o = document.createElement("option");
-            if (opt_type === "stringArray") {
+            if (this.opt_type !== "object") {
                 o.value = this.options[i];
                 o.textContent = this.options[i];
             } else {
                 o.value = this.options[i].value;
-                o.textContent = this.options.label;
+                o.textContent = this.options[i].label;
             }
             this.select.appendChild(o);
         }
@@ -3584,7 +3601,7 @@ var Promise = require('es6-promise').Promise;
                         if (that.input.style.visibility === "visible") {
                             that.input.style.visibility = "hidden";
                             that.select.style.visibility = "visible";
-                            console.log("target value" + e.target.value);
+
                             o = document.createElement("option");
                             o.value = e.target.value;
                             o.textContent = e.target.value;
@@ -3620,20 +3637,22 @@ var Promise = require('es6-promise').Promise;
         },
         setValue: function setValue(v) {
             var value, name, b;
-            if (Apoco.type["string"].check(v)) {
-                name = v;
-                value = v;
-            } else if (Apoco.type["object"].check(v)) {
+            if (!Apoco.type[this.opt_type].check(v)) {
+                throw new Error("select: setValue value " + v + "does not match specified type " + this.opt_type);
+            }
+            if (this.opt_type === "object") {
                 name = v.label;
                 value = v.value;
                 if (!name || !value) {
                     throw new Error("select: setValue must have object with keys value and label");
                 }
             } else {
-                throw new Error("select: setValue must be of type string or object");
+                name = v;
+                value = v;
             }
+
             for (var i = 0; i < this.options.length; i++) {
-                if (Apoco.type["object"].check(this.options[i])) {
+                if (this.opt_type === "object") {
                     b = this.options[i].value;
                 } else {
                     b = this.options[i];
@@ -3641,13 +3660,15 @@ var Promise = require('es6-promise').Promise;
 
                 if (b === value) {
                     this.select.value = value;
-                    this.value = value;
+                    this.select.label = name;
+                    this.value = v;
                     return;
                 }
             }
             if (this.input) {
                 this.input.value = value;
-                this.value = value;
+                this.input.label = name;
+                this.value = v;
                 return;
             }
             throw new Error("SelectField: Cannot set value to " + v + " not in options list");
@@ -3658,12 +3679,13 @@ var Promise = require('es6-promise').Promise;
             if (!v) {
                 return;
             }
-            if (Apoco.type["string"].check(v) || Apoco.type["object"].check(v)) {
+
+            if (Apoco.type[this.opt_type].check(v)) {
                 a.push(v);
             } else if (Apoco.type["array"].check(v)) {
                 a = v;
             } else {
-                throw new Error("select field - addValue needs a string, object,stringArray or objectArray");
+                throw new Error("select field - addValue must be the same type as options array " + this.opt_type);
             }
             for (var i = 0; i < a.length; i++) {
                 this.options.push(a[i]);
@@ -3674,16 +3696,34 @@ var Promise = require('es6-promise').Promise;
             }
         },
         getValue: function getValue() {
-
+            var v,
+                n = null;
             if (this.input && this.input.value) {
-                var v = this.input.value;
+                v = this.input.value;
             } else {
-                var v = this.select.value;
+                v = this.select.value;
             }
-            if (v && v.length > 0) {
-                return v;
+
+            if (!v || v.length <= 0) {
+                return null;
             }
-            return null;
+
+            if (this.opt_type === "float") {
+                v = parseFloat(v);
+            } else if (this.opt_type === "integer") {
+                v = parseInt(v);
+            } else if (this.opt_type === "object") {
+                if (n === null) {
+                    for (var i = 0; i < this.options.length; i++) {
+                        if (this.options[i].value == v) {
+                            n = this.options[i].label;
+                            break;
+                        }
+                    }
+                }
+                v = { value: v, label: n };
+            }
+            return v;
         },
         popupEditor: function popupEditor(func) {
             this.edit_func = func;
@@ -4853,7 +4893,7 @@ var Promise = require('es6-promise').Promise;
 
         REST: function REST(type, options, data) {
             var defaults = { dataType: 'json',
-                mimeType: 'application/json' };
+                mimeType: 'json' };
             if (UI && UI.URL) {
                 defaults.url = UI.URL;
             } else {
@@ -4873,16 +4913,25 @@ var Promise = require('es6-promise').Promise;
             if (settings.url === "") {
                 throw new Error("Apoco.REST Must have a url");
             }
-            if (data && settings.mimeType === 'application/json') {
+            if (data && settings.mimeType === 'application/json' || settings.mimeType === "json") {
                 data = JSON.stringify(data);
             }
             var promise = new Promise(function (resolve, reject) {
                 var request = new XMLHttpRequest();
                 var stateChange = function stateChange() {
+                    var ct,
+                        js = false;
                     if (request.readyState === XMLHttpRequest.DONE) {
                         if (request.status === 200) {
-                            if (request.responseType === 'application/json') {
-                                resolve(JSON.parse(request.responseText));
+                            ct = request.getResponseHeader("Content-Type").split(";");
+                            for (var i = 0; i < ct.length; i++) {
+                                if (ct[i] === "application/json") {
+                                    js = true;
+                                    break;
+                                }
+                            }
+                            if (request.responseType === 'application/json' || js) {
+                                resolve(request.response);
                             } else {
                                 resolve(request.responseText);
                             }
@@ -6412,6 +6461,9 @@ require("./Types");(function () {
 																				var s, t, p, q;
 																				s = fn(a);
 																				t = fn(b);
+																				if (s === t) {
+																								return 0;
+																				}
 																				if (s === null) {
 																								return -1;
 																				}
@@ -6497,6 +6549,7 @@ require("./Types");(function () {
 												r.sort(function (a, b) {
 																for (var i = 0; i < type_data.length; i++) {
 																				t = type_data[i].compare(a, b, type_data[i].fn);
+
 																				if (t !== 0) {
 																								return t;
 																				}
@@ -6712,6 +6765,20 @@ var Apoco = require('./declare').Apoco;
                 }
                 return false;
             } },
+        enum: {
+            html_type: "",
+            field: "select",
+            check: function check(s) {
+                if (Apoco.type.blank.check(s)) {
+                    return false;
+                }
+                if (!Apoco.type.array.check(s)) {
+                    return false;
+                }
+
+                return true;
+            }
+        },
         file: {
             html_type: "file",
             field: "input",
@@ -7169,7 +7236,6 @@ String.prototype.trim = String.prototype.trim || function trim() {
                     var field, item, curr;
 
                     for (var i = 0; i < sort_order.length; i++) {
-
                         field = sort_order[i];
                         item = data[field];
                         curr = aa[field].value;
