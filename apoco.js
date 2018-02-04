@@ -972,9 +972,10 @@ require("./Sort.js");
                             return;
                         }
 
-                        width += parseFloat(t[0]);
+                        width += Math.ceil(parseFloat(t[0]));
                     }
 
+                    width += 1;
                     width = Math.ceil(width).toString() + "px";
                     for (var i = 0; i < this.grids.length; i++) {
                         this.grids[i].element.style.width = width;
@@ -1954,6 +1955,7 @@ require("./DisplayBase");
             } else {
                 d.element.setAttribute("role", "menuitem");
                 d.element.textContent = l;
+                d.element.setAttribute("name", d.name);
 
                 d.parent = this;
                 parent_element.appendChild(d.element);
@@ -2073,12 +2075,15 @@ require("./DisplayBase");
     ApocoMakeSlideshow.prototype = {
         _isVisible: function _isVisible(e) {
             var that = this;
+            console.log("isVisible is here");
             if (that.DOM.contains(that.element)) {
                 if (document.hidden) {
+                    console.log("+++++++++++++++=hidden");
                     if (that.interval) {
                         that.stop();
                     }
                 } else {
+                    console.log("++++++++++++++++visible");
                     if (that.autoplay) {
                         if (that.controls) {
                             that.element.querySelector(".play").click();
@@ -2091,6 +2096,7 @@ require("./DisplayBase");
         },
         handleEvent: function handleEvent(e) {
             if (e.type == "visibilitychange") {
+                console.log("handle event got visibilitychange");
                 this._isVisible(e);
             }
         },
@@ -2279,13 +2285,11 @@ require("./DisplayBase");
                 if (that.interval) {
                     that.stop();
                 }
+                that.components[this.current].element.style.visibility = "visible";
                 if (that.controls) {
                     that.element.querySelector(".play").click();
                 } else {
-                    that.components[this.current].element.style.visibility = "visible";
-                    setTimeout(function () {
-                        that.play();
-                    }, that.delay);
+                    that.play();
                 }
             } else {
                 if (this.components.length > 0) {
@@ -2442,15 +2446,13 @@ require("./DisplayBase");
                 return;
             }
 
-            that.step("next");
             that.autoplay = true;
             that.interval = setInterval(function () {
                 that.step("next", "play");
             }, this.delay);
         },
         stop: function stop() {
-            var that = this,
-                found = 0;
+            var that = this;
             if (this.interval) {
                 clearInterval(that.interval);
             }
@@ -2460,15 +2462,12 @@ require("./DisplayBase");
                 clearInterval(that.fade_timer);
                 that.fade_timer = 0;
                 for (var i = 0; i < this.components.length; i++) {
-                    if (this.components[i].element.style.visibility === "visible") {
-                        if (found === 0) {
-                            that.components[i].element.style.opacity = 1.0;
-                        } else {
-                            that.components[i].element.style.opacity = 1.0;
-                            that.components[i].element.style.visibility = "hidden";
-                        }
-                        found++;
+                    if (i !== this.current) {
+                        this.components[i].element.style.visibility = "hidden";
+                    } else {
+                        this.components[i].element.style.visibility = "visible";
                     }
+                    this.components[i].element.style.opacity = 1.0;
                 }
             }
         },
@@ -2486,7 +2485,7 @@ require("./DisplayBase");
             that.components[next].element.style.top = 0;
             that.components[next].element.style.left = 0;
             that.components[next].element.style.opacity = op;
-            that.components[next].element.style.filter = 'alpha(opacity=' + op * 100 + ")";
+
 
             that.fade_timer = setInterval(function () {
                 if (op >= 1.0) {
@@ -2494,15 +2493,13 @@ require("./DisplayBase");
 
                     that.fade_timer = 0;
                     op = 1.0;
-
                     that.components[prev].element.style.visibility = "hidden";
                     that.components[prev].element.style.opacity = 1;
-                    that.components[prev].element.style.filter = 'alpha(opacity=' + 100 + ")";
                 } else {
                     that.components[prev].element.style.opacity = 1 - op;
-                    that.components[prev].element.style.filter = 'alpha(opacity=' + (1 - op) * 100 + ")";
+
                     that.components[next].element.style.opacity = op;
-                    that.components[next].element.style.filter = 'alpha(opacity=' + op * 100 + ")";
+
                     op += op * inc;
                 }
             }, step);
@@ -2515,6 +2512,10 @@ require("./DisplayBase");
 
             if (this.fade_timer !== 0) {
                 that.stop();
+                this.fade_timer = 0;
+
+                that.play();
+                return;
             }
 
             if (dir === "next") {
@@ -2536,7 +2537,7 @@ require("./DisplayBase");
                 this.components[prev].element.style.visibility = "hidden";
                 this.components[next].element.style.visibility = "visible";
                 this.components[next].element.style.opacity = 1;
-                this.components[next].element.style.filter = "alpha(opacity=100)";
+
                 this.components[next].element.style.top = 0;
                 this.components[next].element.style.left = 0;
             } else {
@@ -2840,10 +2841,23 @@ var Promise = require('es6-promise').Promise;
 
             this.element.style.display = "none";
         },
-        show: function show() {
+        show: function show(display_type) {
             this.hidden = false;
 
-            this.element.style.display = "unset";
+            if (display_type && display_type !== "none") {
+                this.element.style.display = display_type;
+            } else {
+                this.element.style.display = "inherit";
+            }
+        },
+        setRequired: function setRequired(on) {
+            if (on) {
+                this.required = true;
+                this.input.required = true;
+            } else {
+                this.required = false;
+                this.input.removeAttribute("required");
+            }
         },
         getValue: function getValue() {
             var v = this.input.value;
@@ -3165,6 +3179,17 @@ var Promise = require('es6-promise').Promise;
     };
 
     FloatField.prototype = {
+        setRequired: function setRequired(on) {
+            var v = on ? true : false;
+            this.required = v;
+            if (v) {
+                this.input[0].required = v;
+                this.input[1].required = v;
+            } else {
+                this.input[0].removeAttribute("required");
+                this.input[0].removeAttribute("required");
+            }
+        },
         getValue: function getValue() {
             var v;
             var a = this.input[0].value;
@@ -3414,6 +3439,17 @@ var Promise = require('es6-promise').Promise;
             this.element.appendChild(this.input[i].input);
             return true;
         },
+        setRequired: function setRequired(on) {
+            var v = on ? true : false;
+            this.required = v;
+            for (var i = 0; i < this.input.length; i++) {
+                if (v) {
+                    this.input[i].input.required = v;
+                } else {
+                    this.input[i].removeAttribute("required");
+                }
+            }
+        },
         deleteValue: function deleteValue(value) {
             var index = -1;
             for (var i = 0; i < this.input.length; i++) {
@@ -3523,10 +3559,30 @@ var Promise = require('es6-promise').Promise;
     var SelectField = function SelectField(d, element) {
         var i,
             o,
+            p,
             that = this;
+        var allowed_types = ["enum", "float", "integer", "string", "object"];
         this.opt_type = null;
         d.field = "select";
-        d.type = "string";
+        if (!d.type) {
+            d.type = "string";
+        }
+        if (d.type) {
+            for (var i = 0; i < allowed_types.length; i++) {
+                if (d.type == allowed_types[i]) {
+                    if (d.type === "enum") {
+                        this.opt_type = "enum";
+                        d.type = "string";
+                    } else {
+                        this.opt_type = d.type + "Array";
+                    }
+                    break;
+                }
+            }
+            if (this.opt_type === null) {
+                throw new Error("selectField: this type -  " + d.type + " - is not allowed for select field ");
+            }
+        }
         _Field.call(this, d, element);
         this.select = document.createElement("select");
         if (this.required === true) {
@@ -3536,18 +3592,8 @@ var Promise = require('es6-promise').Promise;
             Apoco.Utils.addClass(this.select, this.childClass);
         }
         if (this.options) {
-            if (Apoco.type["objectArray"].check(this.options)) {
-                this.opt_type = "object";
-            } else if (Apoco.type["floatArray"].check(this.options)) {
-                this.opt_type = "float";
-            } else if (Apoco.type["integerArray"].check(this.options)) {
-                this.opt_type = "integer";
-            } else if (Apoco.type["enum"].check(this.options)) {
-                this.opt_type = "string";
-            } else if (Apoco.type["stringArray"].check(this.options)) {
-                this.opt_type = "string";
-            } else {
-                throw new Error("select field- options must be an array or object array with two keys: value and label");
+            if (!Apoco.type[this.opt_type].check(this.options)) {
+                throw new Error("select field- options must be an array or object array with two keys: value and label of type " + this.type);
             }
         } else {
             throw new Error("select field needs options set");
@@ -3555,7 +3601,7 @@ var Promise = require('es6-promise').Promise;
 
         for (i = 0; i < this.options.length; i++) {
             o = document.createElement("option");
-            if (this.opt_type !== "object") {
+            if (this.type !== "object") {
                 o.value = this.options[i];
                 o.textContent = this.options[i];
             } else {
@@ -3590,7 +3636,15 @@ var Promise = require('es6-promise').Promise;
     };
 
     SelectField.prototype = {
-
+        setRequired: function setRequired(on) {
+            var v = on ? true : false;
+            this.required = v;
+            if (v) {
+                this.select.required = v;
+            } else {
+                this.select.removeAttribute("required");
+            }
+        },
         _mkBlankOption: function _mkBlankOption() {
             var that = this,
                 o;
@@ -3637,10 +3691,10 @@ var Promise = require('es6-promise').Promise;
         },
         setValue: function setValue(v) {
             var value, name, b;
-            if (!Apoco.type[this.opt_type].check(v)) {
-                throw new Error("select: setValue value " + v + "does not match specified type " + this.opt_type);
+            if (!Apoco.type[this.type].check(v)) {
+                throw new Error("select: setValue value " + v + " does not match specified type " + this.type);
             }
-            if (this.opt_type === "object") {
+            if (this.type === "object") {
                 name = v.label;
                 value = v.value;
                 if (!name || !value) {
@@ -3652,7 +3706,7 @@ var Promise = require('es6-promise').Promise;
             }
 
             for (var i = 0; i < this.options.length; i++) {
-                if (this.opt_type === "object") {
+                if (this.type === "object") {
                     b = this.options[i].value;
                 } else {
                     b = this.options[i];
@@ -3680,9 +3734,9 @@ var Promise = require('es6-promise').Promise;
                 return;
             }
 
-            if (Apoco.type[this.opt_type].check(v)) {
+            if (Apoco.type[this.type].check(v)) {
                 a.push(v);
-            } else if (Apoco.type["array"].check(v)) {
+            } else if (Apoco.type[this.opt_type].check(v)) {
                 a = v;
             } else {
                 throw new Error("select field - addValue must be the same type as options array " + this.opt_type);
@@ -3708,11 +3762,11 @@ var Promise = require('es6-promise').Promise;
                 return null;
             }
 
-            if (this.opt_type === "float") {
+            if (this.type === "float") {
                 v = parseFloat(v);
-            } else if (this.opt_type === "integer") {
+            } else if (this.type === "integer") {
                 v = parseInt(v);
-            } else if (this.opt_type === "object") {
+            } else if (this.type === "object") {
                 if (n === null) {
                     for (var i = 0; i < this.options.length; i++) {
                         if (this.options[i].value == v) {
@@ -4102,6 +4156,13 @@ var Promise = require('es6-promise').Promise;
             this.input[i].input.value = value;
             if (this.editable === false) {
                 this.input[i].input.readOnly = true;
+            }
+        },
+        setRequired: function setRequired(on) {
+            var v = on ? true : false;
+            this.required = v;
+            for (var i = 0; i < this.input.length; i++) {
+                this.input[i].input.requied = v;
             }
         },
         checkValue: function checkValue() {
@@ -4893,7 +4954,7 @@ var Promise = require('es6-promise').Promise;
 
         REST: function REST(type, options, data) {
             var defaults = { dataType: 'json',
-                mimeType: 'json' };
+                mimeType: 'application/json' };
             if (UI && UI.URL) {
                 defaults.url = UI.URL;
             } else {
@@ -4920,26 +4981,27 @@ var Promise = require('es6-promise').Promise;
                 var request = new XMLHttpRequest();
                 var stateChange = function stateChange() {
                     var ct,
-                        js = false;
+                        mtype = "";
                     if (request.readyState === XMLHttpRequest.DONE) {
-                        if (request.status === 200) {
-                            ct = request.getResponseHeader("Content-Type").split(";");
-                            for (var i = 0; i < ct.length; i++) {
-                                if (ct[i] === "application/json") {
-                                    js = true;
-                                    break;
+                        if (request && request.status === 200) {
+                            if (request.getResponseHeader("Content-Type")) {
+                                ct = request.getResponseHeader("Content-Type").split(";");
+                                if (ct && ct.length > 1) {
+                                    mtype = ct[1];
                                 }
                             }
-                            if (request.responseType === 'application/json' || js) {
-                                resolve(request.response);
+                            if (request.responseType === 'application/json' || mtype.indexOf("json") !== -1) {
+                                resolve(JSON.parse(request.response));
+                            } else if (request.responseType && request.responseType.indexOf("text") !== -1 || mtype.indexOf("text") !== -1) {
+                                request.responseText ? resolve(request.responseText) : resolve(request.response);
                             } else {
-                                resolve(request.responseText);
+                                request.response ? resolve(request.response) : resolve(request.responseText);
                             }
                         } else {
-                            reject(request.status);
                             if (!request) {
                                 throw new Error("REST failed with no return from server");
                             }
+                            reject(request.status);
                         }
                     }
                 };
@@ -4957,7 +5019,6 @@ var Promise = require('es6-promise').Promise;
                     }
                 }
                 if (type === "POST" || type === "PUT") {
-                    console.log("PUT request %j", request);
                     request.send(data);
                 } else {
                     request.responseType = settings.mimeType;
@@ -7529,16 +7590,19 @@ String.prototype.trim = String.prototype.trim || function trim() {
                 history.replaceState(c_obj, c_obj.title, c_obj.url);
             },
             push: function push(name) {
-                var c_obj = {};
+                var p,
+                    c_obj = {};
                 c_obj.name = name;
-                var p = "index.html?" + name;
-                history.pushState(c_obj, p, p);
+
+                p = window.location.pathname + "?" + name;
+
+                history.pushState(c_obj, name, p);
             },
             queryString: function queryString() {
                 var name = null,
                     u = window.location.href;
                 var p = u.split("?");
-                console.log(" got string to start ", p[1]);
+
                 if (p.length === 2) {
                     name = p[1].toString();
                 }
