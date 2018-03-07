@@ -22,6 +22,7 @@ var Promise = require('es6-promise').Promise;
     });
 
     Apoco.start = function (options) {
+
         if (options) {
             if (!Apoco.type["array"].check(options) && Apoco.type["object"].check(options)) {
                 var p = Apoco.display[options.display](options);
@@ -68,8 +69,7 @@ require("./Fields");
         };
         var that = this,
             t,
-            dp,
-            td;
+            dp;
 
         for (var k in defaults) {
             if (options[k] === undefined) {
@@ -81,7 +81,7 @@ require("./Fields");
         }
 
         if (this.DOM === null) {
-            throw new Error(this.display + ": Must supply a DOM id for an existing node");
+            throw new Error(this.display + ": Must supply a DOM id for an existing node or the html element itself");
         }
         if (this.id === null) {
             throw new Error(this.display + ": Must supply a unique id string");
@@ -91,21 +91,23 @@ require("./Fields");
             win = window;
         }
 
-        if (this.DOM && this.DOM.id) {
-            console.log("Error not a string id " + this.DOM.id);
-        }
-        td = win.document.getElementById(this.DOM);
-        t = win.document.getElementById(this.id);
-        if (this.dependsOn) {
-            dp = win.document.getElementById(this.dependsOn);
-        }
 
-        if (!td) {
-            throw new Error("_ApocoDisplayBase DOM must be the string id  of an existing html element " + this.DOM);
+        if (!Apoco.type["object"].check(this.DOM)) {
+            if (this.DOM && this.DOM.id) {
+                console.log("Error not a string id " + this.DOM.id);
+            }
+            this.DOM = win.document.getElementById(this.DOM);
+            if (!this.DOM) {
+                throw new Error("_ApocoDisplayBase DOM must be the string id  of an existing html element or an html element " + this.DOM);
+            }
         }
-        this.DOM = td;
+        t = win.document.getElementById(this.id);
+
         if (t) {
             t.parentNode.removeChild(t);
+        }
+        if (this.dependsOn) {
+            dp = win.document.getElementById(this.dependsOn);
         }
 
         this.element = document.createElement("div");
@@ -155,6 +157,8 @@ require("./Fields");
             if (name !== undefined && this.components) {
                 for (var i = 0; i < this.components.length; i++) {
                     if (this.components[i].name == name) {
+                        return this.components[i];
+                    } else if (this.components[i].id == name) {
                         return this.components[i];
                     }
                 }
@@ -257,6 +261,8 @@ require("./Fields");
             if (this.publish !== undefined) {
                 Apoco.IO.publish(this);
             }
+
+
             if (!this.DOM.contains(this.element)) {
                 if (this.element) {
                     if (this.after) {
@@ -370,7 +376,7 @@ require("./Fields.js");
         },
         addChild: function addChild(index, el, parent_element) {
             var n, d, p;
-            if (Number.isInteger(index)) {
+            if (Apoco.type.integer.check(index)) {
                 d = this.components[index];
             } else {
                 d = index;
@@ -389,6 +395,10 @@ require("./Fields.js");
             d.parent = this;
             if (d.node) {
                 n = Apoco.node(d, el);
+            } else if (d.display) {
+                d.DOM = el;
+                d.name = d.id;
+                n = Apoco.display[d.display](d);
             } else if (d.field || d.type) {
                 if (!d.field) {
                     d.field = Apoco.type[d.type].field;
@@ -405,6 +415,9 @@ require("./Fields.js");
                 p = n.element.parentNode;
                 if (p) {
                     parent_element.appendChild(p);
+                } else if (n.display) {
+                    parent_element.appendChild(el);
+                    n.show();
                 } else {
                     parent_element.appendChild(n.element);
                 }
@@ -588,7 +601,7 @@ require("./DisplayFieldset");
                 p,
                 d;
 
-            if (Number.isInteger(index)) {
+            if (Apoco.type.integer.check(index)) {
                 d = this.components[index];
             } else {
                 d = index;
@@ -1930,7 +1943,7 @@ require("./DisplayBase");
             if (parent_element === undefined) {
                 parent_element = this.element.getElementsByClassName("apoco_menu_list")[0];
             }
-            if (Number.isInteger(index)) {
+            if (Apoco.type.integer.check(index)) {
                 d = this.components[index];
             } else {
                 d = index;
@@ -2622,7 +2635,7 @@ require("./DisplayBase.js");
             if (tablist === undefined) {
                 tablist = this.element.querySelector("ul.tabs");
             }
-            if (Number.isInteger(t)) {
+            if (Apoco.type.integer.check(t)) {
                 alreadyHaveName(this.components[t].name, t);
                 index = t;
                 t = this.components[index];
