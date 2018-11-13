@@ -50,7 +50,6 @@ var Promise = require('es6-promise').Promise;
 var Apoco = require('./declare').Apoco;
 require("./Utils");
 require("./Popups");
-require("./Fields");
 
 ;(function () {
 
@@ -187,7 +186,7 @@ require("./Fields");
                 this.components.splice(index, 1);
             }
 
-            return null;
+            return this;
         },
         deleteChildren: function deleteChildren() {
             for (var i = 0; i < this.components.length; i++) {
@@ -197,6 +196,7 @@ require("./Fields");
                 this.components[i].element.parentNode.removeChild(this.components[i].element);
             }
             this.components.length = 0;
+            return this;
         },
         deleteAll: function deleteAll() {
             this.deleteChildren();
@@ -280,11 +280,10 @@ require("./Fields");
                     }
                 } else {
                     throw new Error("No valid element for " + this.getKey());
-                    return null;
                 }
             }
 
-            return true;
+            return this;
         },
         isHidden: function isHidden() {
             if (this.DOM.contains(this.element)) {
@@ -298,8 +297,8 @@ require("./Fields");
         hide: function hide() {
             if (this.DOM.contains(this.element)) {
                 this.DOM.removeChild(this.element);
-                return;
             }
+            return this;
         },
         delete: function _delete(msg_from_parent) {
             if (this.parent && msg_from_parent === undefined) {
@@ -325,7 +324,7 @@ require("./Fields");
     };
 })();
 
-},{"./Fields":9,"./Popups":13,"./Utils":16,"./declare":19}],3:[function(require,module,exports){
+},{"./Popups":13,"./Utils":16,"./declare":19}],3:[function(require,module,exports){
 "use strict";
 
 var Apoco = require('./declare').Apoco;
@@ -449,6 +448,7 @@ require("./Fields.js");
                     this.components[i].resetValue();
                 }
             }
+            return this;
         },
         check: function check() {
             var valid = true;
@@ -665,6 +665,7 @@ require("./DisplayFieldset");
                 throw new Error("DisplayForm: addButton cannot find button container");
             }
             r.appendChild(this.buttons[index].element);
+            return this.buttons[index];
         },
         getButton: function getButton(name) {
             if (name !== undefined) {
@@ -686,6 +687,7 @@ require("./DisplayFieldset");
             }
 
             this.buttons.length = 0;
+            return this;
         },
         deleteButton: function deleteButton(name) {
             var n,
@@ -705,6 +707,7 @@ require("./DisplayFieldset");
             this.buttons[index].element.parentNode.removeChild(this.buttons[index].element);
             this.buttons[index].element = null;
             this.buttons.splice(index, 1);
+            return this.buttons;
         },
         resetInvalid: function resetInvalid() {
             for (var i = 0; i < this.fields.length; i++) {
@@ -712,6 +715,7 @@ require("./DisplayFieldset");
                     this.fields[i]._resetValue();
                 }
             }
+            this;
         },
 
         print: function print() {
@@ -730,6 +734,7 @@ require("./DisplayFieldset");
             win.document.write('</body></html>');
             win.print();
             win.close();
+            return this;
         },
         check: function check() {
             var valid = true;
@@ -1042,6 +1047,7 @@ require("./Sort.js");
                     this.grids[j].reverse = true;
                 }
             }
+            return this;
         },
         addGrid: function addGrid(grid) {
             var div, h;
@@ -1064,6 +1070,7 @@ require("./Sort.js");
             this.grid_container.appendChild(div);
             grid.element = div;
             grid.sorted = false;
+            return this;
         },
         addCol: function addCol(col) {
             var that = this,
@@ -1174,6 +1181,7 @@ require("./Sort.js");
                 Apoco.popup.spinner(false);
                 this.show();
             }
+            return this.cols[index];
         },
         rowEditPopup: function rowEditPopup(row, buttons, override) {
             var b,
@@ -1260,6 +1268,7 @@ require("./Sort.js");
             } else {
                 throw new Error("cannot find column " + name);
             }
+            return this.cols;
         },
         getColIndex: function getColIndex(name) {
             if (name === undefined) {
@@ -1505,7 +1514,8 @@ require("./Sort.js");
             } else {
                 this._insertRow(row_data, r, grid);
             }
-            return row_data;
+
+            return r;
         },
         deleteRow: function deleteRow(key, group) {
             var closest = {},
@@ -1542,6 +1552,7 @@ require("./Sort.js");
             }
             parent.parentNode.removeChild(parent);
             g.rows.splice(closest.index, 1);
+            return g.rows;
         },
         getRow: function getRow(key, group, closest) {
             var grid = [],
@@ -1661,13 +1672,14 @@ require("./Sort.js");
                     }
                 }
                 if (!resort) {
-                    return;
+                    return grid.rows;
                 }
                 grid.rows.splice(index, 1);
                 this._insertRow(cell_data, row, grid);
             } else {
                 throw new Error("No matching entry found in grid data");
             }
+            return grid.rows;
         },
         getGrid: function getGrid(name) {
             if (!this.grids) {
@@ -1687,6 +1699,7 @@ require("./Sort.js");
         },
         deleteChild: function deleteChild(grid) {
             this.hideGrid(grid);
+            return this;
         },
         deleteChildren: function deleteChildren() {
             var el, row;
@@ -1718,6 +1731,7 @@ require("./Sort.js");
             }
             this.cols.length = 0;
             this.grids.length = 0;
+            return this;
         },
         hideCol: function hideCol(name, state) {
             var b,
@@ -1737,7 +1751,7 @@ require("./Sort.js");
                 current_state = true;
             }
             if (state === current_state) {
-                return;
+                return this.cols[b];
             }
             if (state === "toggle") {
                 state = current_state ? false : true;
@@ -1758,6 +1772,7 @@ require("./Sort.js");
                 }
             }
             this._calcWidth();
+            return this.cols[b];
         },
         deleteAll: function deleteAll() {
             this.deleteChildren();
@@ -1780,6 +1795,7 @@ require("./Sort.js");
                     }
                 }
             }
+            return this;
         },
         hideGrid: function hideGrid(name) {
             if (this.grids.length === 1) {
@@ -1790,6 +1806,7 @@ require("./Sort.js");
                     this.grids[i].element.visibility = "hidden";
                 }
             }
+            return this;
         },
         redrawRows: function redrawRows(grid_name) {
             var b,
@@ -1822,6 +1839,7 @@ require("./Sort.js");
                     b.appendChild(p);
                 }
             }
+            return this;
         },
         getJSON: function getJSON() {
             var c, t, m;
@@ -1921,6 +1939,7 @@ require("./DisplayBase");
             } else {
                 throw new Error("Apoco.menu Could not find element " + name);
             }
+            return this;
         },
         getSelected: function getSelected() {
             if (this.selected) {
@@ -1934,6 +1953,7 @@ require("./DisplayBase");
             for (var i = 0; i < p.length; i++) {
                 p[i].classList.remove("selected");
             }
+            return this;
         },
         addMenu: function addMenu(index, parent_element) {
             var d,
@@ -1990,6 +2010,7 @@ require("./DisplayBase");
                 }
             }
             this.components[index] = d;
+            return this.components[index];
         },
 
         select: function select(val) {
@@ -2003,9 +2024,10 @@ require("./DisplayBase");
                         c[j].classList.remove("selected");
                     }
                     this.selected.element.classList.add("selected");
-                    return;
+                    return this.selected;
                 }
             }
+            return null;
         }
     };
 
@@ -2452,17 +2474,19 @@ require("./DisplayBase");
                 }
                 that._afterShow();
             }
+            return this;
         },
         play: function play() {
             var that = this;
             if (!document.contains(this.element)) {
-                return;
+                return null;
             }
 
             that.autoplay = true;
             that.interval = setInterval(function () {
                 that.step("next", "play");
             }, this.delay);
+            return this;
         },
         stop: function stop() {
             var that = this;
@@ -2483,6 +2507,7 @@ require("./DisplayBase");
                     this.components[i].element.style.opacity = 1.0;
                 }
             }
+            return this;
         },
         _crossFade: function _crossFade(prev, next) {
             var that = this;
@@ -2676,19 +2701,21 @@ require("./DisplayBase.js");
                 }, false);
             }
             tablist.appendChild(t.element);
-            return;
+            return t;
         },
         showTab: function showTab(name) {
             var p = this.getChild(name);
             if (p) {
                 p.element.style.display = "unset";
             }
+            return p;
         },
         hideTab: function hideTab(name) {
             var p = this.getChild(name);
             if (p) {
                 p.element.style.display = "none";
             }
+            return p;
         },
         update: function update(name) {
             var p = this.getChild(name);
@@ -2698,6 +2725,7 @@ require("./DisplayBase.js");
             } else {
                 throw new Error("Apoco.tabs Could not find element " + name);
             }
+            return p;
         },
         getSelected: function getSelected() {
             if (this.selected) {
@@ -2714,12 +2742,14 @@ require("./DisplayBase.js");
                     this.components[i].element.classList.remove("selected");
                 }
             }
+            return this.selected;
         },
         reset: function reset() {
             for (var i = 0; i < this.components.length; i++) {
                 this.components[i].element.classList.remove("selected");
             }
             this.selected = null;
+            return this;
         }
 
     };
@@ -2789,6 +2819,7 @@ var Promise = require('es6-promise').Promise;
         } else {
             throw new Error("Apoco field does not support type " + this.type);
         }
+
         if (element === undefined) {
             this.element = document.createElement("div");
         } else if (element) {
@@ -2853,6 +2884,7 @@ var Promise = require('es6-promise').Promise;
             this.hidden = true;
 
             this.element.style.display = "none";
+            return this;
         },
         show: function show(display_type) {
             this.hidden = false;
@@ -2862,6 +2894,13 @@ var Promise = require('es6-promise').Promise;
             } else {
                 this.element.style.display = "inherit";
             }
+            return this;
+        },
+        isHidden: function isHidden() {
+            if (this.DOM.contains(this.element)) {
+                return false;
+            }
+            return true;
         },
         setRequired: function setRequired(on) {
             if (on) {
@@ -2871,6 +2910,7 @@ var Promise = require('es6-promise').Promise;
                 this.required = false;
                 this.input.removeAttribute("required");
             }
+            return this;
         },
         getValue: function getValue() {
             var v = this.input.value;
@@ -2888,6 +2928,7 @@ var Promise = require('es6-promise').Promise;
                 this.input.value = v;
             }
             this.value = v;
+            return this;
         },
         delete: function _delete() {
             while (this.element.lastChild) {
@@ -3026,18 +3067,19 @@ var Promise = require('es6-promise').Promise;
         if (this.childClass) {
             Apoco.Utils.addClass(this.input, this.childClass);
         }
-
-        if (this.min !== undefined) {
-            this.input.setAttribute("min", this.min);
-        }
-        if (this.max !== undefined) {
-            this.input.setAttribute("max", this.max);
-        }
-        if (this.step) {
-            this.input.setAttribute("step", this.step);
-        }
-        if (this.precision) {
-            this.input.setAttribute("pattern", "^[-+]?\d*\.?\/" + this.precision + "*$");
+        if (this.type === "float" || this.type === "integer") {
+            if (this.min !== undefined) {
+                this.input.setAttribute("min", this.min);
+            }
+            if (this.max !== undefined) {
+                this.input.setAttribute("max", this.max);
+            }
+            if (this.step) {
+                this.input.setAttribute("step", this.step);
+            }
+            if (this.precision) {
+                this.input.setAttribute("pattern", "^[-+]?\d*\.?\/" + this.precision + "*$");
+            }
         }
         if (this.placeholder) {
             this.input.setAttribute("placeholder", this.placeholder);
@@ -3048,7 +3090,11 @@ var Promise = require('es6-promise').Promise;
         this.element.appendChild(this.input);
 
         if (this.value !== null && this.value !== undefined) {
-            this.input.value = this.value;
+            if (Apoco.type[this.type].check(this.value)) {
+                this.input.value = this.value;
+            } else {
+                throw new Error("Field with type " + this.type + "doesn't accept a value of " + this.value);
+            }
         }
         if (this.editable === false) {
             this.input.readOnly = true;
@@ -3202,6 +3248,7 @@ var Promise = require('es6-promise').Promise;
                 this.input[0].removeAttribute("required");
                 this.input[0].removeAttribute("required");
             }
+            return this;
         },
         getValue: function getValue() {
             var v;
@@ -3230,6 +3277,7 @@ var Promise = require('es6-promise').Promise;
         },
         resetValue: function resetValue() {
             this.setValue(this.value);
+            return this;
         },
         setValue: function setValue(v) {
             if (Apoco.type.blank.check(v)) {
@@ -3367,6 +3415,7 @@ var Promise = require('es6-promise').Promise;
                     this.input.removeAttribute("checked");
                 }
             }
+            return this;
         },
         popupEditor: function popupEditor(func) {
             if (this.editable === true) {
@@ -3450,7 +3499,7 @@ var Promise = require('es6-promise').Promise;
                 }
             }
             this.element.appendChild(this.input[i].input);
-            return true;
+            return this;
         },
         setRequired: function setRequired(on) {
             var v = on ? true : false;
@@ -3462,6 +3511,7 @@ var Promise = require('es6-promise').Promise;
                     this.input[i].removeAttribute("required");
                 }
             }
+            return this;
         },
         deleteValue: function deleteValue(value) {
             var index = -1;
@@ -3476,6 +3526,7 @@ var Promise = require('es6-promise').Promise;
             if (index !== -1) {
                 this.input.splice(index, 1);
             }
+            return this;
         },
         setValue: function setValue(v) {
             if (v.length > this.input.length) {
@@ -3489,6 +3540,7 @@ var Promise = require('es6-promise').Promise;
                 }
             }
             this.value = v;
+            return this;
         },
         getValue: function getValue(index) {
             if (index !== undefined && index < this.input.length) {
@@ -3657,6 +3709,7 @@ var Promise = require('es6-promise').Promise;
             } else {
                 this.select.removeAttribute("required");
             }
+            return this;
         },
         _mkBlankOption: function _mkBlankOption() {
             var that = this,
@@ -3729,14 +3782,14 @@ var Promise = require('es6-promise').Promise;
                     this.select.value = value;
                     this.select.label = name;
                     this.value = v;
-                    return;
+                    return this;
                 }
             }
             if (this.input) {
                 this.input.value = value;
                 this.input.label = name;
                 this.value = v;
-                return;
+                return this;
             }
             throw new Error("SelectField: Cannot set value to " + v + " not in options list");
         },
@@ -3744,7 +3797,7 @@ var Promise = require('es6-promise').Promise;
             var o,
                 a = [];
             if (!v) {
-                return;
+                throw new Error("selectField: addValue must have a parameter");
             }
 
             if (Apoco.type[this.type].check(v)) {
@@ -3761,6 +3814,7 @@ var Promise = require('es6-promise').Promise;
                 a[i].label ? o.textContent = a[i].label : o.textContent = a[i];
                 this.select.appendChild(o);
             }
+            return this;
         },
         getValue: function getValue() {
             var v,
@@ -3903,12 +3957,13 @@ var Promise = require('es6-promise').Promise;
                     }
                 }, false);
             }
-            return true;
+            return this;
         },
         resetValue: function resetValue() {
             for (var i = 0; i < this.input.length; i++) {
                 this.input[i].input.checked = this.value[i];
             }
+            return this;
         },
         setValue: function setValue(value, index) {
             var t = 0;
@@ -3930,7 +3985,8 @@ var Promise = require('es6-promise').Promise;
                 } else {
                     throw new Error("ButtonSetField: value must be a boolean array");
                 }
-                return;
+
+                return this;
             }
 
             if (value.length !== this.input.length) {
@@ -3950,6 +4006,7 @@ var Promise = require('es6-promise').Promise;
                 this.input[i].input.checked = value[i];
                 value[i] === true ? this.input[i].input.parentNode.classList.add("checked") : this.input[i].input.parentNode.classList.remove("checked");
             }
+            return this;
         },
         deleteValue: function deleteValue(label) {
             var that = this;
@@ -3968,6 +4025,7 @@ var Promise = require('es6-promise').Promise;
             } else {
                 throw new Error("could not remove value " + value);
             }
+            return this;
         },
         getValue: function getValue() {
             var ar = [],
@@ -4128,6 +4186,7 @@ var Promise = require('es6-promise').Promise;
                     throw new Error("StringArrayField: setValue array is too long");
                 }
             }
+            return this;
         },
         getValue: function getValue() {
             var vals = [],
@@ -4150,6 +4209,7 @@ var Promise = require('es6-promise').Promise;
                 }
                 t.parentNode.removeChild(t);
             }
+            return this;
         },
         addValue: function addValue(value, i) {
             if (i === undefined) {
@@ -4170,6 +4230,7 @@ var Promise = require('es6-promise').Promise;
             if (this.editable === false) {
                 this.input[i].input.readOnly = true;
             }
+            return this;
         },
         setRequired: function setRequired(on) {
             var v = on ? true : false;
@@ -4177,6 +4238,7 @@ var Promise = require('es6-promise').Promise;
             for (var i = 0; i < this.input.length; i++) {
                 this.input[i].input.requied = v;
             }
+            return this;
         },
         checkValue: function checkValue() {
             var valid;
@@ -4213,6 +4275,7 @@ var Promise = require('es6-promise').Promise;
                     this.deleteValue(i);
                 }
             }
+            return this;
         }
     };
 
@@ -4342,6 +4405,7 @@ var Promise = require('es6-promise').Promise;
             if (f && f.element) {
                 f.element.style.display = "none";
             }
+            return this;
         },
         showFile: function showFile(name) {
             var that = this,
@@ -4350,18 +4414,18 @@ var Promise = require('es6-promise').Promise;
             if (f && f.element) {
                 f.element.style.display = "unset";
             }
+            return this;
         },
         setValue: function setValue(v) {},
         addValue: function addValue(v) {
             var that = this;
 
             if (!that.checkValue(v)) {
-                return null;
+                throw new Error(("addValue failed checkValue() with value %j", v));
             }
             v.element = document.createElement("div");
             if (that.resizable === true || v.resizable === true) {
                 v.element.classList.add("resizable");
-                console.log("adding resizable");
             }
             v.object = document.createElement("embed");
             v.object.setAttribute("name", v.name);
@@ -4592,6 +4656,7 @@ var Promise = require('es6-promise').Promise;
             if (this.thumbnails) {
                 this.mk_thumbnails();
             }
+            return this;
         }
     };
 
@@ -4680,6 +4745,7 @@ var Promise = require('es6-promise').Promise;
     AutoCompleteField.prototype = {
         deleteOptions: function deleteOptions() {
             this.options.length = 0;
+            return this;
         },
         addOptions: function addOptions(n) {
             for (var i = 0; i < n.length; i++) {
@@ -4688,6 +4754,7 @@ var Promise = require('es6-promise').Promise;
             if (this.options.length > 1) {
                 Apoco.sort(this.options, "string");
             }
+            return this;
         },
         _make_list: function _make_list(ar) {
             var p;
@@ -4723,7 +4790,6 @@ var Promise = require('es6-promise').Promise;
             }
             return n;
         },
-
         popupEditor: null
     };
 
@@ -5440,18 +5506,13 @@ require("./Types.js");
             return this.parent;
         },
         setText: function setText(text) {
-            switch (this.node) {
-                case "heading":
-                case "paragraph":
-                case "label":
-                case "anchor":
-                case "button":
-                    this.element.innerHTML = text;
-                    this.text = text;
-                    return;
-                default:
-                    throw new Error("Cannot set text of " + this.node);
+            if (this.text !== undefined && text !== undefined) {
+                this.element.innerHTML = text;
+                this.text = text;
+            } else {
+                throw new Error("Cannot set text of " + this.node);
             }
+            return this;
         },
         show: function show() {
             this.hidden = false;
@@ -5460,6 +5521,7 @@ require("./Types.js");
             } else {
                 this.element.style.display = "";
             }
+            return this;
         },
         hide: function hide() {
             this.hidden = true;
@@ -5468,6 +5530,13 @@ require("./Types.js");
             } else {
                 this.element.style.display = "none";
             }
+            return this;
+        },
+        isHidden: function isHidden() {
+            if (document.contains(this.element)) {
+                return false;
+            }
+            return true;
         }
     };
 
@@ -5500,6 +5569,9 @@ require("./Types.js");
             }
         },
         heading: function heading(that) {
+            if (that.text === undefined) {
+                that.text = "";
+            }
             switch (that.size) {
                 case "h1":
                 case "H1":
@@ -5537,22 +5609,31 @@ require("./Types.js");
         },
         label: function label(that) {
             that.element = document.createElement("label");
+            if (that.text === undefined) {
+                that.text = "";
+            }
+
             that.element.textContent = that.text;
+
             if (that.for) {
                 that.element.htmlFor = that.for;
             }
         },
         code: function code(that) {
             that.element = document.createElement("code");
-            if (that.text !== undefined) {
-                that.element.textContent = that.text;
+            if (that.text === undefined) {
+                that.text = "";
             }
+
+            that.element.textContent = that.text;
         },
         paragraph: function paragraph(that) {
             that.element = document.createElement("p");
-            if (that.text !== undefined) {
-                that.element.innerHTML = that.text;
+            if (that.text === undefined) {
+                that.text = "";
             }
+
+            that.element.innerHTML = that.text;
         },
         list: function list(that) {
             if (that.ordered === true) {
@@ -5888,27 +5969,22 @@ require("./Window");
             if (k === undefined) {
                 throw new Error("Panel.show name is undefined");
             }
-            var p = this.get(k);
+            var c,
+                p = this.get(k);
+
             if (!p) {
-                var w = this._UIGet(k);
-                if (!w) {
-                    throw new Error("Cannot find panel " + k);
-                } else {
-                    p = this.add(w);
-                    if (p === null) {
-                        throw new Error("Cannot find panel " + k);
-                    }
-                }
+                return null;
             }
-            var c = p.getChildren();
+            c = p.getChildren();
             if (c === null) {
-                return;
+                return null;
             }
             for (var i = 0; i < c.length; i++) {
                 if (c[i].hidden !== true) {
                     c[i].show();
                 }
             }
+            return p;
         },
         showAll: function showAll(win) {
             var w,
@@ -5958,11 +6034,12 @@ require("./Window");
             }
             var c = p.getChildren();
             if (c === null) {
-                return;
+                return null;
             }
             for (var i = 0; i < c.length; i++) {
                 c[i].hide();
             }
+            return p;
         },
         getList: function getList() {
             var l = [];
@@ -6234,6 +6311,7 @@ require("./Window");
 'use strict';
 
 var Apoco = require('./declare').Apoco;
+require("./Utils");
 
 ;(function () {
     'use strict';
@@ -6256,7 +6334,6 @@ var Apoco = require('./declare').Apoco;
             var mkDialog = function mkDialog(title, message, modal) {
                 var Hdialog, message_text, title_text, Modal, draggable;
                 if (modal && Apoco.modal === undefined) {
-                    console.log("creating a modal " + message);
                     Apoco.modal = document.createElement("div");
                     Apoco.modal.id = "Apoco_modal";
                 }
@@ -6473,7 +6550,7 @@ var Apoco = require('./declare').Apoco;
     };
 })();
 
-},{"./declare":19}],14:[function(require,module,exports){
+},{"./Utils":16,"./declare":19}],14:[function(require,module,exports){
 "use strict";
 
 var Apoco = require('./declare').Apoco;
@@ -10158,7 +10235,7 @@ module.exports = utils;
  * @copyright Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors (Conversion to ES6 API by Jake Archibald)
  * @license   Licensed under MIT license
  *            See https://raw.githubusercontent.com/stefanpenner/es6-promise/master/LICENSE
- * @version   4.1.1
+ * @version   v4.2.5+7f2b526d
  */
 
 (function (global, factory) {
@@ -10176,7 +10253,9 @@ function isFunction(x) {
   return typeof x === 'function';
 }
 
-var _isArray = undefined;
+
+
+var _isArray = void 0;
 if (Array.isArray) {
   _isArray = Array.isArray;
 } else {
@@ -10188,8 +10267,8 @@ if (Array.isArray) {
 var isArray = _isArray;
 
 var len = 0;
-var vertxNext = undefined;
-var customSchedulerFn = undefined;
+var vertxNext = void 0;
+var customSchedulerFn = void 0;
 
 var asap = function asap(callback, arg) {
   queue[len] = callback;
@@ -10218,7 +10297,7 @@ function setAsap(asapFn) {
 var browserWindow = typeof window !== 'undefined' ? window : undefined;
 var browserGlobal = browserWindow || {};
 var BrowserMutationObserver = browserGlobal.MutationObserver || browserGlobal.WebKitMutationObserver;
-var isNode = typeof self === 'undefined' && typeof process !== 'undefined' && ({}).toString.call(process) === '[object process]';
+var isNode = typeof self === 'undefined' && typeof process !== 'undefined' && {}.toString.call(process) === '[object process]';
 
 // test for web worker but not in IE10
 var isWorker = typeof Uint8ClampedArray !== 'undefined' && typeof importScripts !== 'undefined' && typeof MessageChannel !== 'undefined';
@@ -10289,8 +10368,7 @@ function flush() {
 
 function attemptVertx() {
   try {
-    var r = require;
-    var vertx = r('vertx');
+    var vertx = Function('return this')().require('vertx');
     vertxNext = vertx.runOnLoop || vertx.runOnContext;
     return useVertxTimer();
   } catch (e) {
@@ -10298,7 +10376,7 @@ function attemptVertx() {
   }
 }
 
-var scheduleFlush = undefined;
+var scheduleFlush = void 0;
 // Decide what async method to use to triggering processing of queued callbacks:
 if (isNode) {
   scheduleFlush = useNextTick();
@@ -10313,8 +10391,6 @@ if (isNode) {
 }
 
 function then(onFulfillment, onRejection) {
-  var _arguments = arguments;
-
   var parent = this;
 
   var child = new this.constructor(noop);
@@ -10325,13 +10401,12 @@ function then(onFulfillment, onRejection) {
 
   var _state = parent._state;
 
+
   if (_state) {
-    (function () {
-      var callback = _arguments[_state - 1];
-      asap(function () {
-        return invokeCallback(_state, child, callback, parent._result);
-      });
-    })();
+    var callback = arguments[_state - 1];
+    asap(function () {
+      return invokeCallback(_state, child, callback, parent._result);
+    });
   } else {
     subscribe(parent, child, onFulfillment, onRejection);
   }
@@ -10383,7 +10458,7 @@ function resolve$1(object) {
   return promise;
 }
 
-var PROMISE_ID = Math.random().toString(36).substring(16);
+var PROMISE_ID = Math.random().toString(36).substring(2);
 
 function noop() {}
 
@@ -10391,7 +10466,7 @@ var PENDING = void 0;
 var FULFILLED = 1;
 var REJECTED = 2;
 
-var GET_THEN_ERROR = new ErrorObject();
+var TRY_CATCH_ERROR = { error: null };
 
 function selfFulfillment() {
   return new TypeError("You cannot resolve a promise with itself");
@@ -10405,8 +10480,8 @@ function getThen(promise) {
   try {
     return promise.then;
   } catch (error) {
-    GET_THEN_ERROR.error = error;
-    return GET_THEN_ERROR;
+    TRY_CATCH_ERROR.error = error;
+    return TRY_CATCH_ERROR;
   }
 }
 
@@ -10465,9 +10540,9 @@ function handleMaybeThenable(promise, maybeThenable, then$$1) {
   if (maybeThenable.constructor === promise.constructor && then$$1 === then && maybeThenable.constructor.resolve === resolve$1) {
     handleOwnThenable(promise, maybeThenable);
   } else {
-    if (then$$1 === GET_THEN_ERROR) {
-      reject(promise, GET_THEN_ERROR.error);
-      GET_THEN_ERROR.error = null;
+    if (then$$1 === TRY_CATCH_ERROR) {
+      reject(promise, TRY_CATCH_ERROR.error);
+      TRY_CATCH_ERROR.error = null;
     } else if (then$$1 === undefined) {
       fulfill(promise, maybeThenable);
     } else if (isFunction(then$$1)) {
@@ -10523,6 +10598,7 @@ function subscribe(parent, child, onFulfillment, onRejection) {
   var _subscribers = parent._subscribers;
   var length = _subscribers.length;
 
+
   parent._onerror = null;
 
   _subscribers[length] = child;
@@ -10542,8 +10618,8 @@ function publish(promise) {
     return;
   }
 
-  var child = undefined,
-      callback = undefined,
+  var child = void 0,
+      callback = void 0,
       detail = promise._result;
 
   for (var i = 0; i < subscribers.length; i += 3) {
@@ -10560,12 +10636,6 @@ function publish(promise) {
   promise._subscribers.length = 0;
 }
 
-function ErrorObject() {
-  this.error = null;
-}
-
-var TRY_CATCH_ERROR = new ErrorObject();
-
 function tryCatch(callback, detail) {
   try {
     return callback(detail);
@@ -10577,10 +10647,10 @@ function tryCatch(callback, detail) {
 
 function invokeCallback(settled, promise, callback, detail) {
   var hasCallback = isFunction(callback),
-      value = undefined,
-      error = undefined,
-      succeeded = undefined,
-      failed = undefined;
+      value = void 0,
+      error = void 0,
+      succeeded = void 0,
+      failed = void 0;
 
   if (hasCallback) {
     value = tryCatch(callback, detail);
@@ -10605,14 +10675,14 @@ function invokeCallback(settled, promise, callback, detail) {
   if (promise._state !== PENDING) {
     // noop
   } else if (hasCallback && succeeded) {
-      resolve(promise, value);
-    } else if (failed) {
-      reject(promise, error);
-    } else if (settled === FULFILLED) {
-      fulfill(promise, value);
-    } else if (settled === REJECTED) {
-      reject(promise, value);
-    }
+    resolve(promise, value);
+  } else if (failed) {
+    reject(promise, error);
+  } else if (settled === FULFILLED) {
+    fulfill(promise, value);
+  } else if (settled === REJECTED) {
+    reject(promise, value);
+  }
 }
 
 function initializePromise(promise, resolver) {
@@ -10639,97 +10709,103 @@ function makePromise(promise) {
   promise._subscribers = [];
 }
 
-function Enumerator$1(Constructor, input) {
-  this._instanceConstructor = Constructor;
-  this.promise = new Constructor(noop);
-
-  if (!this.promise[PROMISE_ID]) {
-    makePromise(this.promise);
-  }
-
-  if (isArray(input)) {
-    this.length = input.length;
-    this._remaining = input.length;
-
-    this._result = new Array(this.length);
-
-    if (this.length === 0) {
-      fulfill(this.promise, this._result);
-    } else {
-      this.length = this.length || 0;
-      this._enumerate(input);
-      if (this._remaining === 0) {
-        fulfill(this.promise, this._result);
-      }
-    }
-  } else {
-    reject(this.promise, validationError());
-  }
-}
-
 function validationError() {
   return new Error('Array Methods must be provided an Array');
 }
 
-Enumerator$1.prototype._enumerate = function (input) {
-  for (var i = 0; this._state === PENDING && i < input.length; i++) {
-    this._eachEntry(input[i], i);
+var Enumerator = function () {
+  function Enumerator(Constructor, input) {
+    this._instanceConstructor = Constructor;
+    this.promise = new Constructor(noop);
+
+    if (!this.promise[PROMISE_ID]) {
+      makePromise(this.promise);
+    }
+
+    if (isArray(input)) {
+      this.length = input.length;
+      this._remaining = input.length;
+
+      this._result = new Array(this.length);
+
+      if (this.length === 0) {
+        fulfill(this.promise, this._result);
+      } else {
+        this.length = this.length || 0;
+        this._enumerate(input);
+        if (this._remaining === 0) {
+          fulfill(this.promise, this._result);
+        }
+      }
+    } else {
+      reject(this.promise, validationError());
+    }
   }
-};
 
-Enumerator$1.prototype._eachEntry = function (entry, i) {
-  var c = this._instanceConstructor;
-  var resolve$$1 = c.resolve;
+  Enumerator.prototype._enumerate = function _enumerate(input) {
+    for (var i = 0; this._state === PENDING && i < input.length; i++) {
+      this._eachEntry(input[i], i);
+    }
+  };
 
-  if (resolve$$1 === resolve$1) {
-    var _then = getThen(entry);
+  Enumerator.prototype._eachEntry = function _eachEntry(entry, i) {
+    var c = this._instanceConstructor;
+    var resolve$$1 = c.resolve;
 
-    if (_then === then && entry._state !== PENDING) {
-      this._settledAt(entry._state, i, entry._result);
-    } else if (typeof _then !== 'function') {
+
+    if (resolve$$1 === resolve$1) {
+      var _then = getThen(entry);
+
+      if (_then === then && entry._state !== PENDING) {
+        this._settledAt(entry._state, i, entry._result);
+      } else if (typeof _then !== 'function') {
+        this._remaining--;
+        this._result[i] = entry;
+      } else if (c === Promise$1) {
+        var promise = new c(noop);
+        handleMaybeThenable(promise, entry, _then);
+        this._willSettleAt(promise, i);
+      } else {
+        this._willSettleAt(new c(function (resolve$$1) {
+          return resolve$$1(entry);
+        }), i);
+      }
+    } else {
+      this._willSettleAt(resolve$$1(entry), i);
+    }
+  };
+
+  Enumerator.prototype._settledAt = function _settledAt(state, i, value) {
+    var promise = this.promise;
+
+
+    if (promise._state === PENDING) {
       this._remaining--;
-      this._result[i] = entry;
-    } else if (c === Promise$2) {
-      var promise = new c(noop);
-      handleMaybeThenable(promise, entry, _then);
-      this._willSettleAt(promise, i);
-    } else {
-      this._willSettleAt(new c(function (resolve$$1) {
-        return resolve$$1(entry);
-      }), i);
+
+      if (state === REJECTED) {
+        reject(promise, value);
+      } else {
+        this._result[i] = value;
+      }
     }
-  } else {
-    this._willSettleAt(resolve$$1(entry), i);
-  }
-};
 
-Enumerator$1.prototype._settledAt = function (state, i, value) {
-  var promise = this.promise;
-
-  if (promise._state === PENDING) {
-    this._remaining--;
-
-    if (state === REJECTED) {
-      reject(promise, value);
-    } else {
-      this._result[i] = value;
+    if (this._remaining === 0) {
+      fulfill(promise, this._result);
     }
-  }
+  };
 
-  if (this._remaining === 0) {
-    fulfill(promise, this._result);
-  }
-};
+  Enumerator.prototype._willSettleAt = function _willSettleAt(promise, i) {
+    var enumerator = this;
 
-Enumerator$1.prototype._willSettleAt = function (promise, i) {
-  var enumerator = this;
+    subscribe(promise, undefined, function (value) {
+      return enumerator._settledAt(FULFILLED, i, value);
+    }, function (reason) {
+      return enumerator._settledAt(REJECTED, i, reason);
+    });
+  };
 
-  subscribe(promise, undefined, function (value) {
-    return enumerator._settledAt(FULFILLED, i, value);
-  }, function (reason) {
-    return enumerator._settledAt(REJECTED, i, reason);
-  });
-};
+  return Enumerator;
+}();
 
 /**
   `Promise.all` accepts an array of promises, and returns a new promise which
@@ -10778,8 +10854,8 @@ Enumerator$1.prototype._willSettleAt = function (promise, i) {
   fulfilled, or rejected if any of them become rejected.
   @static
 */
-function all$1(entries) {
-  return new Enumerator$1(this, entries).promise;
+function all(entries) {
+  return new Enumerator(this, entries).promise;
 }
 
 /**
@@ -10847,7 +10923,7 @@ function all$1(entries) {
   @return {Promise} a promise which settles in the same way as the first passed
   promise to settle.
 */
-function race$1(entries) {
+function race(entries) {
   /*jshint validthis:true */
   var Constructor = this;
 
@@ -11014,300 +11090,327 @@ function needsNew() {
   ```
 
   @class Promise
-  @param {function} resolver
+  @param {Function} resolver
   Useful for tooling.
   @constructor
 */
-function Promise$2(resolver) {
-  this[PROMISE_ID] = nextId();
-  this._result = this._state = undefined;
-  this._subscribers = [];
 
-  if (noop !== resolver) {
-    typeof resolver !== 'function' && needsResolver();
-    this instanceof Promise$2 ? initializePromise(this, resolver) : needsNew();
+var Promise$1 = function () {
+  function Promise(resolver) {
+    this[PROMISE_ID] = nextId();
+    this._result = this._state = undefined;
+    this._subscribers = [];
+
+    if (noop !== resolver) {
+      typeof resolver !== 'function' && needsResolver();
+      this instanceof Promise ? initializePromise(this, resolver) : needsNew();
+    }
   }
-}
-
-Promise$2.all = all$1;
-Promise$2.race = race$1;
-Promise$2.resolve = resolve$1;
-Promise$2.reject = reject$1;
-Promise$2._setScheduler = setScheduler;
-Promise$2._setAsap = setAsap;
-Promise$2._asap = asap;
-
-Promise$2.prototype = {
-  constructor: Promise$2,
 
   /**
-    The primary way of interacting with a promise is through its `then` method,
-    which registers callbacks to receive either a promise's eventual value or the
-    reason why the promise cannot be fulfilled.
-  
-    ```js
-    findUser().then(function(user){
-      // user is available
-    }, function(reason){
-      // user is unavailable, and you are given the reason why
-    });
-    ```
-  
-    Chaining
-    --------
-  
-    The return value of `then` is itself a promise.  This second, 'downstream'
-    promise is resolved with the return value of the first promise's fulfillment
-    or rejection handler, or rejected if the handler throws an exception.
-  
-    ```js
-    findUser().then(function (user) {
-      return user.name;
-    }, function (reason) {
-      return 'default name';
-    }).then(function (userName) {
-      // If `findUser` fulfilled, `userName` will be the user's name, otherwise it
-      // will be `'default name'`
-    });
-  
-    findUser().then(function (user) {
-      throw new Error('Found user, but still unhappy');
-    }, function (reason) {
-      throw new Error('`findUser` rejected and we're unhappy');
-    }).then(function (value) {
-      // never reached
-    }, function (reason) {
-      // if `findUser` fulfilled, `reason` will be 'Found user, but still unhappy'.
-      // If `findUser` rejected, `reason` will be '`findUser` rejected and we're unhappy'.
-    });
-    ```
-    If the downstream promise does not specify a rejection handler, rejection reasons will be propagated further downstream.
-  
-    ```js
-    findUser().then(function (user) {
-      throw new PedagogicalException('Upstream error');
-    }).then(function (value) {
-      // never reached
-    }).then(function (value) {
-      // never reached
-    }, function (reason) {
-      // The `PedgagocialException` is propagated all the way down to here
-    });
-    ```
-  
-    Assimilation
-    ------------
-  
-    Sometimes the value you want to propagate to a downstream promise can only be
-    retrieved asynchronously. This can be achieved by returning a promise in the
-    fulfillment or rejection handler. The downstream promise will then be pending
-    until the returned promise is settled. This is called *assimilation*.
-  
-    ```js
-    findUser().then(function (user) {
-      return findCommentsByAuthor(user);
-    }).then(function (comments) {
-      // The user's comments are now available
-    });
-    ```
-  
-    If the assimliated promise rejects, then the downstream promise will also reject.
-  
-    ```js
-    findUser().then(function (user) {
-      return findCommentsByAuthor(user);
-    }).then(function (comments) {
-      // If `findCommentsByAuthor` fulfills, we'll have the value here
-    }, function (reason) {
-      // If `findCommentsByAuthor` rejects, we'll have the reason here
-    });
-    ```
-  
-    Simple Example
-    --------------
-  
-    Synchronous Example
-  
-    ```javascript
-    let result;
-  
-    try {
-      result = findResult();
-      // success
-    } catch(reason) {
+  The primary way of interacting with a promise is through its `then` method,
+  which registers callbacks to receive either a promise's eventual value or the
+  reason why the promise cannot be fulfilled.
+   ```js
+  findUser().then(function(user){
+    // user is available
+  }, function(reason){
+    // user is unavailable, and you are given the reason why
+  });
+  ```
+   Chaining
+  --------
+   The return value of `then` is itself a promise.  This second, 'downstream'
+  promise is resolved with the return value of the first promise's fulfillment
+  or rejection handler, or rejected if the handler throws an exception.
+   ```js
+  findUser().then(function (user) {
+    return user.name;
+  }, function (reason) {
+    return 'default name';
+  }).then(function (userName) {
+    // If `findUser` fulfilled, `userName` will be the user's name, otherwise it
+    // will be `'default name'`
+  });
+   findUser().then(function (user) {
+    throw new Error('Found user, but still unhappy');
+  }, function (reason) {
+    throw new Error('`findUser` rejected and we're unhappy');
+  }).then(function (value) {
+    // never reached
+  }, function (reason) {
+    // if `findUser` fulfilled, `reason` will be 'Found user, but still unhappy'.
+    // If `findUser` rejected, `reason` will be '`findUser` rejected and we're unhappy'.
+  });
+  ```
+  If the downstream promise does not specify a rejection handler, rejection reasons will be propagated further downstream.
+   ```js
+  findUser().then(function (user) {
+    throw new PedagogicalException('Upstream error');
+  }).then(function (value) {
+    // never reached
+  }).then(function (value) {
+    // never reached
+  }, function (reason) {
+    // The `PedgagocialException` is propagated all the way down to here
+  });
+  ```
+   Assimilation
+  ------------
+   Sometimes the value you want to propagate to a downstream promise can only be
+  retrieved asynchronously. This can be achieved by returning a promise in the
+  fulfillment or rejection handler. The downstream promise will then be pending
+  until the returned promise is settled. This is called *assimilation*.
+   ```js
+  findUser().then(function (user) {
+    return findCommentsByAuthor(user);
+  }).then(function (comments) {
+    // The user's comments are now available
+  });
+  ```
+   If the assimliated promise rejects, then the downstream promise will also reject.
+   ```js
+  findUser().then(function (user) {
+    return findCommentsByAuthor(user);
+  }).then(function (comments) {
+    // If `findCommentsByAuthor` fulfills, we'll have the value here
+  }, function (reason) {
+    // If `findCommentsByAuthor` rejects, we'll have the reason here
+  });
+  ```
+   Simple Example
+  --------------
+   Synchronous Example
+   ```javascript
+  let result;
+   try {
+    result = findResult();
+    // success
+  } catch(reason) {
+    // failure
+  }
+  ```
+   Errback Example
+   ```js
+  findResult(function(result, err){
+    if (err) {
       // failure
-    }
-    ```
-  
-    Errback Example
-  
-    ```js
-    findResult(function(result, err){
-      if (err) {
-        // failure
-      } else {
-        // success
-      }
-    });
-    ```
-  
-    Promise Example;
-  
-    ```javascript
-    findResult().then(function(result){
+    } else {
       // success
-    }, function(reason){
+    }
+  });
+  ```
+   Promise Example;
+   ```javascript
+  findResult().then(function(result){
+    // success
+  }, function(reason){
+    // failure
+  });
+  ```
+   Advanced Example
+  --------------
+   Synchronous Example
+   ```javascript
+  let author, books;
+   try {
+    author = findAuthor();
+    books  = findBooksByAuthor(author);
+    // success
+  } catch(reason) {
+    // failure
+  }
+  ```
+   Errback Example
+   ```js
+   function foundBooks(books) {
+   }
+   function failure(reason) {
+   }
+   findAuthor(function(author, err){
+    if (err) {
+      failure(err);
       // failure
-    });
-    ```
-  
-    Advanced Example
-    --------------
-  
-    Synchronous Example
-  
-    ```javascript
-    let author, books;
-  
-    try {
-      author = findAuthor();
-      books  = findBooksByAuthor(author);
-      // success
-    } catch(reason) {
-      // failure
-    }
-    ```
-  
-    Errback Example
-  
-    ```js
-  
-    function foundBooks(books) {
-  
-    }
-  
-    function failure(reason) {
-  
-    }
-  
-    findAuthor(function(author, err){
-      if (err) {
-        failure(err);
-        // failure
-      } else {
-        try {
-          findBoooksByAuthor(author, function(books, err) {
-            if (err) {
-              failure(err);
-            } else {
-              try {
-                foundBooks(books);
-              } catch(reason) {
-                failure(reason);
-              }
+    } else {
+      try {
+        findBoooksByAuthor(author, function(books, err) {
+          if (err) {
+            failure(err);
+          } else {
+            try {
+              foundBooks(books);
+            } catch(reason) {
+              failure(reason);
             }
-          });
-        } catch(error) {
-          failure(err);
-        }
-        // success
+          }
+        });
+      } catch(error) {
+        failure(err);
       }
-    });
-    ```
-  
-    Promise Example;
-  
-    ```javascript
-    findAuthor().
-      then(findBooksByAuthor).
-      then(function(books){
-        // found books
-    }).catch(function(reason){
-      // something went wrong
-    });
-    ```
-  
-    @method then
-    @param {Function} onFulfilled
-    @param {Function} onRejected
-    Useful for tooling.
-    @return {Promise}
+      // success
+    }
+  });
+  ```
+   Promise Example;
+   ```javascript
+  findAuthor().
+    then(findBooksByAuthor).
+    then(function(books){
+      // found books
+  }).catch(function(reason){
+    // something went wrong
+  });
+  ```
+   @method then
+  @param {Function} onFulfilled
+  @param {Function} onRejected
+  Useful for tooling.
+  @return {Promise}
   */
-  then: then,
 
   /**
-    `catch` is simply sugar for `then(undefined, onRejection)` which makes it the same
-    as the catch block of a try/catch statement.
+  `catch` is simply sugar for `then(undefined, onRejection)` which makes it the same
+  as the catch block of a try/catch statement.
+  ```js
+  function findAuthor(){
+  throw new Error('couldn't find that author');
+  }
+  // synchronous
+  try {
+  findAuthor();
+  } catch(reason) {
+  // something went wrong
+  }
+  // async with promises
+  findAuthor().catch(function(reason){
+  // something went wrong
+  });
+  ```
+  @method catch
+  @param {Function} onRejection
+  Useful for tooling.
+  @return {Promise}
+  */
+
+
+  Promise.prototype.catch = function _catch(onRejection) {
+    return this.then(null, onRejection);
+  };
+
+  /**
+    `finally` will be invoked regardless of the promise's fate just as native
+    try/catch/finally behaves
+  
+    Synchronous example:
   
     ```js
-    function findAuthor(){
-      throw new Error('couldn't find that author');
+    findAuthor() {
+      if (Math.random() > 0.5) {
+        throw new Error();
+      }
+      return new Author();
     }
   
-    // synchronous
     try {
-      findAuthor();
-    } catch(reason) {
-      // something went wrong
+      return findAuthor(); // succeed or fail
+    } catch(error) {
+      return findOtherAuther();
+    } finally {
+      // always runs
+      // doesn't affect the return value
     }
+    ```
   
-    // async with promises
+    Asynchronous example:
+  
+    ```js
     findAuthor().catch(function(reason){
-      // something went wrong
+      return findOtherAuther();
+    }).finally(function(){
+      // author was either found, or not
     });
     ```
   
-    @method catch
-    @param {Function} onRejection
-    Useful for tooling.
+    @method finally
+    @param {Function} callback
     @return {Promise}
   */
-  'catch': function _catch(onRejection) {
-    return this.then(null, onRejection);
-  }
-};
+
+
+  Promise.prototype.finally = function _finally(callback) {
+    var promise = this;
+    var constructor = promise.constructor;
+
+    if (isFunction(callback)) {
+      return promise.then(function (value) {
+        return constructor.resolve(callback()).then(function () {
+          return value;
+        });
+      }, function (reason) {
+        return constructor.resolve(callback()).then(function () {
+          throw reason;
+        });
+      });
+    }
+
+    return promise.then(callback, callback);
+  };
+
+  return Promise;
+}();
+
+Promise$1.prototype.then = then;
+Promise$1.all = all;
+Promise$1.race = race;
+Promise$1.resolve = resolve$1;
+Promise$1.reject = reject$1;
+Promise$1._setScheduler = setScheduler;
+Promise$1._setAsap = setAsap;
+Promise$1._asap = asap;
 
 /*global self*/
-function polyfill$1() {
-    var local = undefined;
+function polyfill() {
+  var local = void 0;
 
-    if (typeof global !== 'undefined') {
-        local = global;
-    } else if (typeof self !== 'undefined') {
-        local = self;
-    } else {
-        try {
-            local = Function('return this')();
-        } catch (e) {
-            throw new Error('polyfill failed because global object is unavailable in this environment');
-        }
+  if (typeof global !== 'undefined') {
+    local = global;
+  } else if (typeof self !== 'undefined') {
+    local = self;
+  } else {
+    try {
+      local = Function('return this')();
+    } catch (e) {
+      throw new Error('polyfill failed because global object is unavailable in this environment');
+    }
+  }
+
+  var P = local.Promise;
+
+  if (P) {
+    var promiseToString = null;
+    try {
+      promiseToString = Object.prototype.toString.call(P.resolve());
+    } catch (e) {
+      // silently ignored
     }
 
-    var P = local.Promise;
-
-    if (P) {
-        var promiseToString = null;
-        try {
-            promiseToString = Object.prototype.toString.call(P.resolve());
-        } catch (e) {
-            // silently ignored
-        }
-
-        if (promiseToString === '[object Promise]' && !P.cast) {
-            return;
-        }
+    if (promiseToString === '[object Promise]' && !P.cast) {
+      return;
     }
+  }
 
-    local.Promise = Promise$2;
+  local.Promise = Promise$1;
 }
 
 // Strange compat..
-Promise$2.polyfill = polyfill$1;
-Promise$2.Promise = Promise$2;
+Promise$1.polyfill = polyfill;
+Promise$1.Promise = Promise$1;
 
-return Promise$2;
+return Promise$1;
 
 })));
+
+
 
 
 
