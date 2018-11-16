@@ -1908,6 +1908,10 @@ var UI={};
         if(that.parent.selected){
             Apoco.Panel.hide(that.parent.selected.name);
         }
+        
+        if(!Apoco.Panel.get(name)){
+            Apoco.Panel.add(name);
+        }
         Apoco.Panel.show(name);
         if(!pop){
            // console.log("pushing " + name);
@@ -3024,6 +3028,8 @@ var UI={};
     mkIO();
     mkUtils();
     mkWindows();
+
+    
    // see if the query string exists on url
     var name=Apoco.Utils.history.queryString();
     if(name){
