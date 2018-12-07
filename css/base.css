@@ -394,15 +394,55 @@ p a:hover{outline: none; text-decoration: none}
 /*dl{text-align:justify} */
 code{font-size: 10pt}
 
-.apoco_dialog{position: fixed; top: 50%; left: 50%; z-index: 1000;
-              width: 20em; height: 12em;
-              border:1px solid black;
-              background-color:#ffffff;}
-.apoco_dialog div.titlebar{height: 2em; border-bottom: 1px solid;}
-.apoco_dialog div.titlebar button{height:16px;width:16px; float:right; font-size: 16px;padding:0;}
-.apoco_dialog div.titlebar button span{width:16px; height:16px}
-.apoco_dialog div div button{float:right}
-.apoco_dialog div.message{text-align: center;height:7.5em; width: inherit}
+
+
+/* for error messages etc */
+.apoco_dialog{
+    position: fixed;
+    top: 50%;
+    left: 20%;
+    z-index: 1000;
+    min-width: 20em;  /*height: 12em;*/
+    border:1px solid black;
+    background-color:#fff;}
+
+.apoco_dialog div.titlebar{
+    height: 2em;
+    color: black;
+    font-weight:bold;
+    background-color:#eee;
+    border-bottom: 1px solid;}
+
+.apoco_dialog div.titlebar>span{
+    margin-left: 1em;
+}
+.apoco_dialog div.titlebar button{
+    float:right;
+    font-size: 16px;
+    margin: 0;
+    padding:0;}
+
+.apoco_dialog div.titlebar button span{
+    width:16px;
+    height:16px;
+}
+.apoco_dialog div div button{
+    float:right;
+    margin: 0 15px 15px 0;
+}
+.apoco_dialog div.message{
+    text-align: center;
+    min-height: 10em;
+    max-width: 20em;
+    width: inherit;
+    overflow:auto;}
+
+.apoco_dialog div.message p{
+    width: inherit;
+    margin-left: 1em;
+    word-wrap: break-word;
+}
+
 
 #apoco_datepicker{
     display: block;
