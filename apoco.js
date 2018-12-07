@@ -410,8 +410,10 @@ require("./Fields.js");
             } else {
                 throw new Error("Apoco.displayFieldset: meed to specify node type or field");
             }
-            if (n) {
-                p = n.element.parentNode;
+            if (n && n.element) {
+                if (n.element) {
+                    p = n.element.parentNode;
+                }
                 if (p) {
                     parent_element.appendChild(p);
                 } else if (n.display) {
@@ -422,9 +424,11 @@ require("./Fields.js");
                 }
                 this.components[index] = n;
                 return n;
-            } else {
-                throw new Error("Apoco,fieldset, doesn't know how to make " + d.node);
             }
+
+            p = d.field ? d.field : d.node;
+            Apoco.popup.error("Apoco,fieldset", " doesn't know how to make " + p);
+
             return null;
         },
         getJSON: function getJSON() {
@@ -2779,6 +2783,7 @@ require("./Sort");
 require('./Types');
 require("./datepicker");
 require("./IO");
+require("./Popups");
 
 var Promise = require('es6-promise').Promise;
 
@@ -3009,11 +3014,14 @@ var Promise = require('es6-promise').Promise;
     var StaticField = function StaticField(d, element) {
         var that = this;
         d.field = "static";
+
         _Field.call(this, d, element);
+
         this.span = document.createElement("span");
         if (this.childClass) {
             Apoco.Utils.addClass(this.span, this.childClass);
         }
+
 
         this.setValue(this.value);
         this.element.appendChild(this.span);
@@ -3376,6 +3384,88 @@ var Promise = require('es6-promise').Promise;
     };
 
     Apoco.Utils.extend(TimeField, _Field);
+
+    var ObjectField = function ObjectField(d, element) {
+        d.field = "object";
+        d.type = "object";
+
+        if (!d.inputType) {
+            d.inputType = "string";
+        }
+
+        if (!Apoco.type["object"].check(d.value)) {
+            Apoco.popup.error(("Fields: Object- object param %j ", d.value), "Not an object");
+            return null;
+        }
+        if (!d.userSetValue || !Apoco.type["function"].check(d.userSetValue)) {
+            Apoco.popup.error("Object Field: - missing function", "missing param setValue function");
+            console.log("Object field: userSetValue function incorrect");
+            return null;
+        }
+        if (!d.userGetValue || !Apoco.type["function"].check(d.userGetValue)) {
+            Apoco.popup.error("Object Field: - missing function", "missing param getValue function");
+            console.log("Object field: userSetValue function incorrect");
+            return null;
+        }
+
+        _Field.call(this, d, element);
+
+        this.html_type = Apoco.type[this.inputType].html_type;
+
+        this.input = document.createElement("input");
+        this.input.setAttribute("type", this.html_type);
+        if (this.childClass) {
+            Apoco.Utils.addClass(this.input, this.childClass);
+        }
+        if (this.placeholder) {
+            this.input.setAttribute("placeholder", this.placeholder);
+        }
+        if (this.required) {
+            this.input.required = true;
+        }
+        this.element.appendChild(this.input);
+        if (!this.editable) {
+            this.input.readOnly = true;
+        }
+        if (this.value) {
+            this.setValue(this.value);
+        } else {
+            this.value = {};
+        }
+        if (this.action) {
+            this.action(this);
+        }
+        return this;
+    };
+
+    ObjectField.prototype = {
+        setValue: function setValue(val) {
+            var c;
+            if (Apoco.type[this.type].check(val)) {
+                for (var k in val) {
+                    this.value[k] = val[k];
+                }
+                c = this.userSetValue(val);
+
+                if (this.input) {
+                    this.input.value = c;
+                } else if (this.field === "static") {
+                    this.span.textContent = c;
+                }
+            } else {
+                Apoco.popup.error("Object field setValue ", ("input is not an object %j", val));
+                return null;
+            }
+            return this;
+        },
+        getValue: function getValue() {
+            if (this.field === "static") {
+                return this.value;
+            }
+            return this.userGetValue(this);
+        }
+    };
+    Apoco.Utils.extend(ObjectField, _Field);
 
     var CheckBoxField = function CheckBoxField(d, element) {
         d.field = "checkBox";
@@ -4818,6 +4908,14 @@ var Promise = require('es6-promise').Promise;
                 n.push(k);
             }return n;
         },
+        object: function object(options, element) {
+            return new ObjectField(options, element);
+        },
+        objectMethods: function objectMethods() {
+            var n = [];for (var k in ObjectField.prototype) {
+                n.push(k);
+            }return n;
+        },
         float: function float(options, element) {
             return new FloatField(options, element);
         },
@@ -4925,7 +5023,7 @@ var Promise = require('es6-promise').Promise;
     };
 })();
 
-},{"./IO":10,"./Sort":14,"./Types":15,"./Utils":16,"./datepicker":18,"./declare":19,"es6-promise":25}],10:[function(require,module,exports){
+},{"./IO":10,"./Popups":13,"./Sort":14,"./Types":15,"./Utils":16,"./datepicker":18,"./declare":19,"es6-promise":25}],10:[function(require,module,exports){
 'use strict';
 
 var Apoco = require('./declare').Apoco;
@@ -6380,7 +6478,7 @@ require("./Utils");
                     s = document.createElement("div");
                     s.classList.add("message");
                     message_text = document.createElement("p");
-                    message_text.style.float = "right";
+
                     message_text.textContent = message;
                     b = document.createElement("span");
                     s.appendChild(b);
@@ -7077,6 +7175,8 @@ var Apoco = require('./declare').Apoco;
                 return true;
             } },
         object: {
+            html_type: "",
+            field: "object",
             check: function check(a) {
                 if (a === undefined) {
                     return false;
