@@ -257,12 +257,14 @@ require("./Popups");
         _execute: function _execute(data) {
             return null;
         },
-        show: function show() {
+        show: function show(fromParent) {
             if (this.publish !== undefined) {
                 Apoco.IO.publish(this);
             }
 
-
+            if (fromParent && this.hidden) {
+                return this;
+            }
             if (!this.DOM.contains(this.element)) {
                 if (this.element) {
                     if (this.after) {
@@ -278,6 +280,7 @@ require("./Popups");
                     if (this._afterShow !== undefined) {
                         this._afterShow();
                     }
+                    this.hidden = false;
                 } else {
                     throw new Error("No valid element for " + this.getKey());
                 }
@@ -294,9 +297,12 @@ require("./Popups");
         displayType: function displayType() {
             return this.displayType;
         },
-        hide: function hide() {
+        hide: function hide(fromParent) {
             if (this.DOM.contains(this.element)) {
                 this.DOM.removeChild(this.element);
+                if (!fromParent) {
+                    this.hidden = true;
+                }
             }
             return this;
         },
@@ -820,7 +826,7 @@ require("./Sort.js");
             t;
 
         Apoco._DisplayBase.call(this, options, win);
-
+        this.heatMap = false;
         this.cellEdit = null;
         this.allowEdit = true;
         this.grids = [];
@@ -1623,6 +1629,26 @@ require("./Sort.js");
         getChildren: function getChildren() {
             return this.getGrid();
         },
+        setCellHeatMap: function setCellHeatMap(cell) {
+            var cell_el, cl, to;
+            if (cell.hidden !== true) {
+                cl = "cell_updated";
+                cell_el = cell.getElement();
+                if (cell_el.classList.contains(cl)) {
+                    cell_el.classList.remove(cl);
+                    cell_el.classList.add("cell_updated_fast");
+                    cl = "cell_updated_fast";
+                } else {
+                    cell.getElement().classList.add(cl);
+                }
+            }
+            if (to) {
+                clearTimeout(to);
+            }
+            to = setTimeout(function () {
+                cell.getElement().classList.remove(cl);
+            }, 15000);
+        },
         updateRow: function updateRow(cell_data, override_editable) {
             var row,
                 index,
@@ -1651,22 +1677,8 @@ require("./Sort.js");
                 for (var k in cell_data) {
                     if (row[k].editable !== false || override_editable === true) {
                         row[k].setValue(cell_data[k]);
-                        if (row[k].hidden !== true) {
-                            cl = "cell_updated";
-                            cell = row[k].getElement();
-                            if (cell.classList.contains(cl)) {
-                                cell.classList.remove(cl);
-                                cell.classList.add("cell_updated_fast");
-                                cl = "cell_updated_fast";
-                            } else {
-                                row[k].getElement().classList.add(cl);
-                            }
-                            if (to) {
-                                clearTimeout(to);
-                            }
-                            to = setTimeout(function () {
-                                row[k].getElement().classList.remove(cl);
-                            }, 15000);
+                        if (this.heatMap) {
+                            this.setCellHeatMap(row[k]);
                         }
                     }
                 }
@@ -2902,7 +2914,7 @@ var Promise = require('es6-promise').Promise;
             return this;
         },
         isHidden: function isHidden() {
-            if (this.DOM.contains(this.element)) {
+            if (this.DOM && this.DOM.contains(this.element)) {
                 return false;
             }
             return true;
@@ -3045,7 +3057,9 @@ var Promise = require('es6-promise').Promise;
                     this.value = t[0];
                 }
             }
-            if (Apoco.type["array"].check(v)) {
+            if (this.type === "object" && this.userSetValue) {
+                this.span.textContent = this.userSetValue(v);
+            } else if (Apoco.type["array"].check(v)) {
                 for (var i = 0; i < v.length; i++) {
                     p = v[i];
                     t = t.concat(p.toString());
@@ -3394,18 +3408,13 @@ var Promise = require('es6-promise').Promise;
         }
 
         if (!Apoco.type["object"].check(d.value)) {
-            Apoco.popup.error(("Fields: Object- object param %j ", d.value), "Not an object");
-            return null;
+            throw new Error("Fields: Object  value  is incorrect type %j ", d.value);
         }
         if (!d.userSetValue || !Apoco.type["function"].check(d.userSetValue)) {
-            Apoco.popup.error("Object Field: - missing function", "missing param setValue function");
-            console.log("Object field: userSetValue function incorrect");
-            return null;
+            throw new Error("Object field: userSetValue function incorrect");
         }
         if (!d.userGetValue || !Apoco.type["function"].check(d.userGetValue)) {
-            Apoco.popup.error("Object Field: - missing function", "missing param getValue function");
-            console.log("Object field: userSetValue function incorrect");
-            return null;
+            throw new Error("Object field: userGetValue function incorrect");
         }
 
         _Field.call(this, d, element);
@@ -3453,8 +3462,7 @@ var Promise = require('es6-promise').Promise;
                     this.span.textContent = c;
                 }
             } else {
-                Apoco.popup.error("Object field setValue ", ("input is not an object %j", val));
-                return null;
+                throw new Error("Object field setValue value incorrect type %j", val);
             }
             return this;
         },
@@ -4042,7 +4050,6 @@ var Promise = require('es6-promise').Promise;
                                 b[i].parentNode.classList.add("checked");
                             }
                         }
-
                         e.stopPropagation();
                     }
                 }, false);
@@ -4320,6 +4327,7 @@ var Promise = require('es6-promise').Promise;
             if (this.editable === false) {
                 this.input[i].input.readOnly = true;
             }
+
             return this;
         },
         setRequired: function setRequired(on) {
@@ -4373,75 +4381,205 @@ var Promise = require('es6-promise').Promise;
 
     var FileField = function FileField(d, element) {
         var that = this,
-            rc = true;
+            container,
+            q,
+            p;
         d.field = "FileField";
-        d.type = "file";
+        d.type = "fileArray";
         _Field.call(this, d, element);
 
         if (!this.value) {
             this.value = [];
         }
-        if (this.width) {
-            if (!isNaN(this.width)) {
-                this.width = this.width + "px";
-            }
-        } else {
-            this.width = "400px";
-        }
-        if (this.height) {
-            if (!isNaN(this.height)) {
-                this.height = this.height + "px";
-            }
-        } else {
-            this.height = "400px";
-        }
 
+        this.element.classList.add(d.field);
         if (this.editable !== false) {
             if (!window.FileReader) {
                 Apoco.popup.dialog("Sorry No FileReader", "Your browser does not support the image reader");
                 throw new Error("No FileReader");
             }
-            this.input = document.createElement("input");
-            this.input.type = "file";
-            if (this.childClass) {
-                Apoco.Utils.addClass(this.input, this.childClass);
+            console.log("making a container");
+            this.container = document.createElement("div");
+            this.container.classList.add("file_container");
+            this.element.appendChild(this.container);
+
+            p = document.createElement("div");
+            p.classList.add("upload_icon");
+            this.container.appendChild(p);
+
+            that._mkInputNode();
+
+            if (this.text) {
+                p = document.createElement("p");
+                p.classList.add("text");
+                p.innerHTML = this.text;
+                this.container.appendChild(p);
             }
-            if (this.required === true) {
-                this.input.required = true;
-            }
-            this.input.setAttribute("name", "files");
-            if (this.opts && this.opts.multiple !== false) {
-                this.input.setAttribute("multiple", "multiple");
-            }
-            this.element.appendChild(this.input);
-            this.input.addEventListener("change", function (e) {
-                rc = that._getFileSelect(e, that);
-                for (var i = 0; i < that._promises.length; i++) {
-                    that._promises[i].then(function (file) {
-                        that.addValue(file);
-                    }).catch(function (msg) {
-                        console.log("Apoco.field.fileReader Error " + msg);
-                    });
+            if (this.progressBar) {
+                this.progressBar = document.createElement("div");
+                this.progressBar.classList.add("progress_bar");
+                this.container.appendChild(this.progressBar);
+                if (that.opts) {
+                    that.opts.progressBar = that.progressBar;
+                    that.opts.progressCallback = that._doProgress;
                 }
-            });
-        }
-        if (this.values > 0) {
-            if (!that.checkValue()) {
-                throw new Error("file must have a name");
             }
-            for (var i = 0; i < this.value.length; i++) {
-                this.addValue(this.value[i]);
+            if (this.resetButton) {
+                this.resetButton = document.createElement("button");
+                this.resetButton.textContent = "Remove files";
+                this.resetButton.style = "display: none";
+                if (this.resetClass) {
+                    Apoco.Utils.addClass(this.resetButton, this.resetClass);
+                }
+                this.resetButton.onclick = function () {
+                    that.reset(that);
+                    return false;
+                };
+                this.container.append(this.resetButton);
+            }
+            if (this.dragDrop) {
+                that._addListeners();
             }
         }
-        if (!rc) {
-            Apoco.popup["dialog"]("File Load Error", "One or more of the selected files is not a readable file");
+
+        if (!this.filesHidden) {
+            if (this.value.length > 0) {
+                if (!that.checkValue()) {
+                    throw new Error("file must have a name");
+                }
+                for (var i = 0; i < this.value.length; i++) {
+                    this.mkFileDisplay(this.value[i]);
+                }
+            }
         }
+
         if (this.action) {
             this.action(this);
         }
         return this;
     };
     FileField.prototype = {
+        _promises: [],
+        _errors: [],
+        _mkInputNode: function _mkInputNode() {
+            var q,
+                p,
+                that = this;
+            q = document.createElement("div");
+            if (that.childClass) {
+                Apoco.Utils.addClass(q, this.childClass);
+            }
+            p = document.createElement("span");
+            p.textContent = "Choose a file";
+            q.appendChild(p);
+            that.input = document.createElement("input");
+            that.input.type = "file";
+            that.input.classList.add("invisible_input");
+            if (that.required === true) {
+                that.input.required = true;
+            }
+            that.input.setAttribute("name", "files");
+            if (that.opts) {
+                for (var k in that.opts) {
+                    that.input.setAttribute(k, this.opts[k]);
+                }
+            }
+            q.appendChild(this.input);
+            that.container.appendChild(q);
+            if (this.dragDrop === true) {
+                p = document.createElement("p");
+                p.classList.add("dragdrop_text");
+                p.innerHTML = "<b>OR</b> drag and drop a file here.";
+                that.container.appendChild(p);
+            }
+            that._addInputListener();
+            if (that.maxNum < 1) {
+                throw new Error("fileReader: maxNum cannot be less than one" + that.maxNum);
+            }
+        },
+        showError: function showError() {
+            var that = this,
+                str = "";
+            for (var i = 0; i < that._errors.length; i++) {
+                str = str.concat(that._errors[i]);
+                if (that.progressBar) {
+                    that.progressBar.innerHTML = str;
+                    that.progressBar.style = "background-color: red; width:auto";
+                }
+            }
+            that._errors = [];
+        },
+        _addInputListener: function _addInputListener() {
+            var that = this,
+                rc;
+            that.input.addEventListener("change", function (e) {
+                console.log("FileReader got change event ");
+                rc = that._getFiles(e, that);
+
+                that._processFileIn();
+            });
+        },
+        _processFileIn: function _processFileIn() {
+            var that = this;
+            Promise.all(that._promises).then(function (files) {
+                var pb = that.progressBar;
+                console.log("errors are %j ", that._errors);
+                that.showError();
+
+                for (var i = 0; i < files.length; i++) {
+                    console.log("adding value " + files[i].name);
+                    that.addValue(files[i]);
+
+                    if (pb) {
+                        if (that.value.length > 1) {
+                            pb.textContent = "Staged for upload: " + that.value.length + " files ";
+                        } else {
+                            pb.textContent = "Staged for upload: " + files[0].name;
+                        }
+                    }
+                }
+            }).catch(function (msg) {
+                console.log("Apoco.field.fileReader Error " + msg);
+            });
+        },
+        _handleEvent: function _handleEvent(that) {
+            return function (e) {
+                switch (e.type) {
+                    case "dragover":
+                        if (!that.container.classList.contains("drop_zone")) {
+                            that.container.classList.add("drop_zone");
+                        }
+                        e.preventDefault();
+                        e.stopPropagation();
+                        break;
+                    case "dragenter":
+                        that.container.classList.add("drop_zone");
+                        e.stopPropagation();
+                        break;
+                    case "dragleave":
+                        that.container.classList.remove("drop_zone");
+                        e.stopPropagation();
+                        break;
+                    case "drop":
+                        that.container.classList.remove("drop_zone");
+                        e.preventDefault();
+                        e.stopPropagation();
+                        that._getFiles(e, that);
+                        that._processFileIn();
+                        break;
+                    default:
+                        return;
+                }
+            };
+        },
+        _addListeners: function _addListeners() {
+            var that = this;
+
+            that.container.addEventListener("dragover", that._handleEvent(that), false);
+            that.container.addEventListener("dragenter", that._handleEvent(that), false);
+            that.container.addEventListener("dragleave", that._handleEvent(that), false);
+            that.container.addEventListener("drop", that._handleEvent(that), false);
+        },
         checkValue: function checkValue(v) {
             var that = this,
                 ar = [];
@@ -4461,6 +4599,12 @@ var Promise = require('es6-promise').Promise;
                     return false;
                 }
             }
+            for (var i = 0; i < this.value.length; i++) {
+                if (this.value[i].name === v.name) {
+                    console.log("already have this value");
+                    return false;
+                }
+            }
             return true;
         },
         getValue: function getValue() {
@@ -4477,16 +4621,28 @@ var Promise = require('es6-promise').Promise;
         getPromises: function getPromises() {
             return this._promises;
         },
+        clearPromises: function clearPromises() {
+            this._promises = [];
+            console.log("clearPromises length is " + this._promises.length);
+        },
+        clearFileNames: function clearFileNames() {
+            if (this._files) {
+                this._files.length = 0;
+            }
+            console.log("clearFilenames file s");
+        },
         findFile: function findFile(name) {
             var that = this;
-            for (var i = 0; i < that.value.length; i++) {
-                if (that.value[i].name === name) {
-                    if (that.value[i].object) {
-                        return that.value[i];
+            if (name) {
+                for (var i = 0; i < that.value.length; i++) {
+                    if (that.value[i].name === name) {
+                        if (that.value[i].object) {
+                            return that.value[i];
+                        }
                     }
                 }
             }
-            return null;
+            return that.value;
         },
         hideFile: function hideFile(name) {
             var that = this,
@@ -4506,14 +4662,109 @@ var Promise = require('es6-promise').Promise;
             }
             return this;
         },
-        setValue: function setValue(v) {},
+        setValue: function setValue(v) {
+            return null;
+        },
+        resetValue: function resetValue() {
+            if (this.value !== undefined) {
+                this.value = [];
+            }
+
+
+            for (var i = 0; i < this.value.length; i++) {
+                console.log("FireReader removing embedded stuff");
+                this.element.removeChild(this.value[i].element);
+            }
+            this.reset();
+            return this.value;
+        },
+        deleteValue: function deleteValue(name) {
+            var that = this,
+                found = null;
+            for (var i = 0; i < that._promises.length; i++) {
+                console.log("looking at promise " + i);
+                that._promises[i].then(function (file) {
+                    if (file.name === name) {
+                        found = i;
+                    }
+                });
+            }
+            console.log("FileReader: got promise to delete " + found);
+
+            for (var i = 0; i < that.value.length; i++) {
+                if (that.value[i].name === name) {
+                    break;
+                }
+            }
+            if (i < that.value.length) {
+                console.log(Object.keys(that.value[i]));
+                for (var k in that.value[i]) {
+                    console.log("k is " + k);
+                    if (k === "element") {
+                        if (that.value[i].element.parentNode) {
+                            that.value[i].element.parentNode.removeChild(that.value[i].element);
+                        }
+                    } else {
+                        delete that.value[i][k];
+                    }
+                }
+                that.value.splice(i, 1);
+                if (found) {
+                    that._prpmises.splice(found, 1);
+                }
+            } else {
+                return null;
+            }
+
+            return that.value;
+        },
         addValue: function addValue(v) {
             var that = this;
-
+            that.replaced = null;
             if (!that.checkValue(v)) {
                 throw new Error(("addValue failed checkValue() with value %j", v));
             }
+
+            if (that.maxNum && that.value.length === that.maxNum) {
+                that.replaced = that.value[that.maxNum - 1].name;
+                that.value[that.maxNum - 1] = v;
+            } else {
+                that.value.push(v);
+            }
+            if (!that.filesHidden) {
+                that.mkFileDisplay(v);
+            }
+            if (that.resetButton) {
+                if (that.value.length) {
+                    that.resetButton.style = "display: inherit";
+                } else {
+                    that.resetButton.style = "display: none";
+                }
+            }
+            return that.value;
+        },
+        mkFileDisplay: function mkFileDisplay(v) {
+            var that = this;
+
+            if (v && v.object) {
+                return null;
+            }
+            if (that.width) {
+                if (!isNaN(that.width)) {
+                    that.width = that.width + "px";
+                }
+            } else {
+                that.width = "400px";
+            }
+            if (that.height) {
+                if (!isNaN(that.height)) {
+                    that.height = that.height + "px";
+                }
+            } else {
+                that.height = "400px";
+            }
             v.element = document.createElement("div");
+            v.element.classList.add("embed_file");
             if (that.resizable === true || v.resizable === true) {
                 v.element.classList.add("resizable");
             }
@@ -4535,22 +4786,101 @@ var Promise = require('es6-promise').Promise;
                 v.object.height = v.height;
             }
 
-            if (that.hideFiles === true || v.hidden === true) {
+            if (that.hideFiles === true) {
                 v.object.style.display = "none";
             }
             v.element.appendChild(v.object);
-
-            that.value.push(v);
             that.element.appendChild(v.element);
+
+            console.log("FileReader: promises length is " + that._promises.length);
+            console.log("Filereader has " + that.value.length);
             return v;
         },
-        _getFileSelect: function _getFileSelect(evt) {
+        reset: function reset() {
+            var that = this;
+            console.log("FileReader: reset is here");
+            for (var i = 0; i < that.value.length; i++) {
+                console.log("deleting file " + that.value[i].name);
+                that.deleteValue(that.value[i].name);
+            }
+            that.clearFileNames();
+            that.clearPromises();
+            that._errors = [];
+            that.value = [];
+            that.input.value = "";
+            if (that.progressBar) {
+                that.progressBar.innerHTML = "";
+                that.progressBar.style.width = "0px";
+            }
+            if (that.resetButton) {
+                that.resetButton.style = "display: none";
+            }
+        },
+        _doProgress: function _doProgress(evt) {
+            var pl,
+                pb,
+                that = this;
+
+            console.log("_doProgress got event %j ", evt);
+            if (!that["progressBar"]) {
+                throw new Error("Cannot find progressBar");
+            } else {
+                pb = that.progressBar;
+            }
+            pb.style = "";
+
+            if (evt.lengthComputable && evt.type === "progress") {
+                pl = Math.round(evt.loaded / evt.total * 100);
+
+                if (pl < 100) {
+                    pb.style.width = pl + '%';
+                    pb.textContent = pl + '%';
+                }
+            } else {
+                pb.style.width = "auto";
+                pb.textContent = "100%";
+            }
+        },
+        _getFiles: function _getFiles(evt) {
             var that = this,
                 rc = 0;
+            var files = [],
+                f;
             that._promises = [];
 
             evt.stopPropagation();
-            var files = evt.target.files;
+            if (that.opts.accept) {
+                that.opts.mimeType = that.opts.accept;
+            }
+            if (evt.target && evt.target.files) {
+                f = evt.target.files;
+            } else if (evt.dataTransfer && evt.dataTransfer.files) {
+                f = evt.dataTransfer.files;
+            } else {
+                throw new Error("FileReader: cannot find files");
+            }
+
+            if (that.opts.mimeType) {
+                console.log("checking mimetype");
+                for (var i = 0; i < f.length; i++) {
+                    console.log("evt target MIMEType is " + f[i].type);
+                    for (var j = 0; j < that.opts.mimeType.length; j++) {
+                        if (f[i].type.match(that.opts.mimeType[j])) {
+                            console.log("Got matching file types");
+                            files.push(f[i]);
+                            break;
+                        }
+                    }
+                }
+            } else {
+                files = f;
+            }
+            if (files.length === 0) {
+                that.input.value = "";
+                return 0;
+            }
+
+            console.log("_getFileSelect has files %j ", files);
             rc = Apoco.IO.getFiles(files, that);
             return rc;
         }
@@ -5205,7 +5535,7 @@ var Promise = require('es6-promise').Promise;
 
             return promise;
         },
-        getFiles: function getFiles(f, that, event) {
+        getFiles: function getFiles(f, that) {
             var promise,
                 found = false;
             if (!that) {
@@ -5221,11 +5551,12 @@ var Promise = require('es6-promise').Promise;
                 that._files = [];
             }
 
+            console.log("getFiles that is %j", that);
             for (var i = 0; i < f.length; i++) {
                 if (that.opts) {
                     if (that.opts["maxSize"]) {
                         if (f[i].size > that.opts.maxSize) {
-                            that._errors.push("File too large" + f[i].name + "exceeds the maximum allowable file size");
+                            that._errors.push("File too large " + f[i].name + " exceeds the maximum allowable file size");
                             continue;
                         }
                     }
@@ -5247,32 +5578,34 @@ var Promise = require('es6-promise').Promise;
                 }
 
                 promise = new Promise(function (resolve, reject) {
-                    var pb = null,
-                        pc,
+                    var pc,
                         reader = new FileReader();
                     reader.onerror = function (evt) {
                         reject("DropZone Error " + evt.target.error.code);
                     };
-                    if (that.opts && that.opts.progressBar) {
+                    if (that.opts && that.opts.progressCallback) {
                         reader.onprogress = function (evt) {
-                            that._doProgress(evt);
+                            that.opts.progressCallback(evt, that);
                         };
-                        pb = that.opts.progressBar;
                     }
 
-                    reader.onload = function (file) {
+                    reader.onload = function (file, self) {
                         return function (evt) {
                             evt.stopPropagation();
                             file.data = evt.target.result;
-
-                            that._files.push(file);
-                            resolve(file);
-                            if (pb) {
-                                pb.style.width = 100 + '%';
-                                pb.textContent = "Staged for upload " + file.name;
+                            for (var i = 0; i < that._files.length; i++) {
+                                if (that._files[i].name === file.name) {
+                                    reject("IO.getFiles: File already exists");
+                                    return;
+                                }
                             }
+                            that._files.push(file);
+                            if (self.opts.progressCallback) {
+                                self.opts.progressCallback(evt, that);
+                            }
+                            resolve(file);
                         };
-                    }(f[i]);
+                    }(f[i], that);
 
                     reader.readAsDataURL(f[i]);
                 });
@@ -5436,108 +5769,6 @@ var Promise = require('es6-promise').Promise;
     };
     Apoco.IO.webSocket = function (options, data) {
         return new _webSocket(options, data);
-    };
-
-    var _dropZone = function _dropZone(element, opts) {
-        var that = this,
-            p;
-        this.opts = opts;
-        if (!window.File && !window.FileReader && !window.FileList && !window.Blob) {
-            return false;
-        }
-        if (!element) {
-            throw new Error("Utils:dropZone - element does not exist");
-        }
-        if (this.opts && this.opts.progressBar) {
-            if (this.opts.progressBar.tagName !== "DIV") {
-                throw new Error("Apoco.IO.dropZone - progressBar needs to be a div");
-            }
-        }
-        element.addEventListener("dragover", function (e) {
-            if (!element.classList.contains("drop_zone")) {
-                element.classList.add("drop_zone");
-            }
-            e.preventDefault();
-            e.stopPropagation();
-        }, false);
-        element.addEventListener("dragenter", function (e) {
-            element.classList.add("drop_zone");
-            e.stopPropagation();
-        }, false);
-        element.addEventListener("dragleave", function (e) {
-            element.classList.remove("drop_zone");
-            e.stopPropagation();
-        }, false);
-        element.addEventListener("drop", function (e) {
-            element.classList.remove("drop_zone");
-            e.preventDefault();
-            e.stopPropagation();
-
-            that._getFiles(e);
-        }, false);
-        return true;
-    };
-    _dropZone.prototype = {
-        _promises: [],
-        _files: [],
-        _getFiles: function _getFiles(e) {
-            var f,
-                that = this;
-            e.stopPropagation();
-            e.preventDefault();
-            f = e.dataTransfer.files;
-            Apoco.IO.getFiles(f, that, e);
-            if (this.opts["action"]) {
-                this.opts.action(this._promises);
-            }
-        },
-        _doProgress: function _doProgress(evt) {
-            var pl,
-                pb,
-                that = this;
-
-            if (that.opts && that.opts["progressBar"]) {
-                pb = that.opts.progressBar;
-            } else {
-                throw new Error("Cannot find progressBar");
-            }
-
-            if (!pb) {
-                return;
-            }
-            if (evt.lengthComputable) {
-                pl = Math.round(evt.loaded / evt.total * 100);
-
-                if (pl < 100) {
-                    pb.style.width = pl + '%';
-                    pb.textContent = pl + '%';
-                }
-            }
-        },
-        getPromises: function getPromises() {
-            return this._promises;
-        },
-        getFileList: function getFileList() {
-            return this._files;
-        },
-        clearPromises: function clearPromises() {
-            this._promises.length = 0;
-        },
-        clearFileList: function clearFileList() {
-            this._files.length = 0;
-        },
-        reset: function reset() {
-            this.clearFileList();
-            this.clearPromises();
-            this._errors = [];
-            if (this.opts && this.opts.progressBar) {
-                this.opts.progressBar.innerHTML = "";
-            }
-        }
-
-    };
-    Apoco.IO.dropZone = function (element, options) {
-        return new _dropZone(element, options);
     };
 })();
 
@@ -5904,7 +6135,8 @@ require("./Types.js");
                     t.click();
                 }, false);
             }
-        } };
+        }
+    };
 
     Apoco.node = function (options, el) {
         if (options === "node_list") {
@@ -6048,11 +6280,11 @@ require("./Window");
                     }
                     t = t.concat(" -->");
                     nodes = nodes.concat(t);
-                    t = c.element.innerHTML;
+                    t = c.element.outerHTML;
                     nodes = nodes.concat(t);
                 }
             }
-            console.log(nodes);
+
             return nodes;
         },
         get: function get(k) {
@@ -6069,7 +6301,6 @@ require("./Window");
             }
             var c,
                 p = this.get(k);
-
             if (!p) {
                 return null;
             }
@@ -6078,9 +6309,8 @@ require("./Window");
                 return null;
             }
             for (var i = 0; i < c.length; i++) {
-                if (c[i].hidden !== true) {
-                    c[i].show();
-                }
+                console.log("Panel show " + c[i].id + " hidden " + c[i].hidden);
+                c[i].show(true);
             }
             return p;
         },
@@ -6126,7 +6356,7 @@ require("./Window");
         },
         hide: function hide(k) {
             var p = this.get(k);
-
+            console.log("hiding panel " + k);
             if (!p) {
                 throw new Error("Panel.hide Cannot find panel " + k);
             }
@@ -6135,7 +6365,9 @@ require("./Window");
                 return null;
             }
             for (var i = 0; i < c.length; i++) {
-                c[i].hide();
+                if (document.contains(c[i].element)) {
+                    c[i].hide(true);
+                }
             }
             return p;
         },
@@ -7037,6 +7269,20 @@ var Apoco = require('./declare').Apoco;
                 }
                 return true;
             } },
+        fileArray: {
+            html_type: "file",
+            field: ["file", "dropBox"],
+            check: function check(f) {
+                if (Apoco.type.array.check(f)) {
+                    for (var i = 0; i < f.length; i++) {
+                        if (!Apoco.type.file.check(f[i])) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+        },
         float: {
             html_type: "number",
             field: "float",
@@ -7433,7 +7679,7 @@ String.prototype.trim = String.prototype.trim || function trim() {
             if (!element) {
                 throw new Error("addClass: requires an html element");
             }
-            if (!cl === undefined) {
+            if (!cl) {
                 throw new Error("addClass: requires a class or an array of classes");
             }
             if (cl) {
@@ -7441,7 +7687,9 @@ String.prototype.trim = String.prototype.trim || function trim() {
                     element.classList.add(cl);
                 } else {
                     for (var i = 0; i < cl.length; i++) {
-                        element.classList.add(cl[i]);
+                        if (Apoco.type["string"].check(cl[i]) && !Apoco.type["blank"].check(cl[i])) {
+                            element.classList.add(cl[i]);
+                        }
                     }
                 }
             }
