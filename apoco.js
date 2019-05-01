@@ -3,7 +3,6 @@
 "use strict";
 
 global.Apoco = require('./declare').Apoco;
-require("./index.js");
 require("./Utils.js");
 require("./Panel.js");
 require("./Popups.js");
@@ -44,7 +43,7 @@ var Promise = require('es6-promise').Promise;
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Panel.js":12,"./Popups.js":13,"./Utils.js":16,"./declare":19,"./index.js":20,"es6-promise":25}],2:[function(require,module,exports){
+},{"./Panel.js":12,"./Popups.js":13,"./Utils.js":16,"./declare":19,"es6-promise":25}],2:[function(require,module,exports){
 "use strict";
 
 var Apoco = require('./declare').Apoco;
@@ -166,17 +165,33 @@ require("./Popups");
         },
         deleteChild: function deleteChild(name, no_splice) {
             var n,
-                index = -1;
+                index = -1,
+                check = null;
             if (name === undefined) {
-                throw new Error("DisplayMenu: deleteMenu needs a name");
+                throw new Error("deleteChild: needs a name");
+            }
+            if (Apoco.type.string.check(name)) {
+                check = "name";
+            } else if (Apoco.type.object.check(name)) {
+                check = "object";
+            }
+            if (check === null) {
+                throw new Error("deleteChild: parameter is name string or object");
             }
             for (var i = 0; i < this.components.length; i++) {
-                if (this.components[i].name == name) {
-                    index = i;
-
-                    break;
+                if (check === "name") {
+                    if (this.components[i].name == name) {
+                        index = i;
+                        break;
+                    }
+                } else {
+                    if (this.components[i] === name) {
+                        index = i;
+                        break;
+                    }
                 }
             }
+
             if (index === -1) {
                 throw new Error("Display:deleteChild  Cannot find component " + name);
             }
@@ -1959,6 +1974,7 @@ require("./DisplayBase");
             if (this.heading) {
                 s = document.createElement("span");
                 s.textContent = this.heading;
+                s.onclick = void 0;
                 this.element.appendChild(s);
             }
 
@@ -2651,6 +2667,7 @@ var Apoco = require('./declare').Apoco;
 
 require("./DisplayBase.js");
 
+require("./Types.js");
 
 ;(function () {
 
@@ -2666,8 +2683,10 @@ require("./DisplayBase.js");
 
     var default_select_tabs_action = function default_select_tabs_action(that) {
         var name = that.selected.name;
-        Apoco.Panel.hideAll();
-        Apoco.Panel.show(name);
+        if (Apoco.Panel) {
+            Apoco.Panel.hideAll();
+            Apoco.Panel.show(name);
+        }
     };
 
     ApocoMakeTabs.prototype = {
@@ -2815,7 +2834,7 @@ require("./DisplayBase.js");
     };
 })();
 
-},{"./DisplayBase.js":2,"./declare":19}],9:[function(require,module,exports){
+},{"./DisplayBase.js":2,"./Types.js":15,"./declare":19}],9:[function(require,module,exports){
 'use strict';
 
 var Apoco = require('./declare').Apoco;
@@ -2977,8 +2996,14 @@ var Promise = require('es6-promise').Promise;
             return this;
         },
         delete: function _delete() {
+
             while (this.element.lastChild) {
                 this.element.removeChild(this.element.lastChild);
+            }
+
+            if (this.parent) {
+                this.parent.deleteChild(this);
+                return;
             }
             if (this.element.parentNode) {
                 this.element.parentNode.removeChild(this.element);
@@ -3564,6 +3589,9 @@ var Promise = require('es6-promise').Promise;
             throw new Error("NumberArrayfield needs a size or value");
         }
         d.field = "numberArray";
+        if (!d.type) {
+            d.type = "integerArray";
+        }
         _Field.call(this, d, element);
         if (!this.size) {
             this.size = this.value.length;
@@ -3652,8 +3680,9 @@ var Promise = require('es6-promise').Promise;
             }
             if (index !== -1) {
                 this.input.splice(index, 1);
+                return this;
             }
-            return this;
+            return null;
         },
         setValue: function setValue(v) {
             if (v.length > this.input.length) {
@@ -4413,7 +4442,7 @@ var Promise = require('es6-promise').Promise;
             container,
             q,
             p;
-        d.field = "FileField";
+        d.field = "fileReader";
         d.type = "fileArray";
         _Field.call(this, d, element);
 
@@ -5447,11 +5476,16 @@ var Promise = require('es6-promise').Promise;
                     p.push(this._subscribers[name][i].context);
                 }
             }
-            return p;
+            if (p.length > 0) {
+                return p;
+            }
+            return null;
         },
         unsubscribe: function unsubscribe(that, name) {
             var n;
-
+            if (!that || !that.listen) {
+                throw new Error("unsubscribe needs an object with a key value pair of listen:[{name:'someName'}]");
+            }
             for (var i = 0; i < that.listen.length; i++) {
                 n = that.listen[i].name;
 
@@ -5460,11 +5494,13 @@ var Promise = require('es6-promise').Promise;
                         if (this._subscribers[n][j]["context"].action === that.action) {
                             if (name === undefined || name === n) {
                                 this._subscribers[n].splice(j, 1);
+                                break;
                             }
                         }
                     }
                 }
             }
+
             for (var k in this._subscribers) {
                 if (this._subscribers[k].length === 0) {
                     delete this._subscribers[k];
@@ -5580,7 +5616,6 @@ var Promise = require('es6-promise').Promise;
                 that._files = [];
             }
 
-            console.log("getFiles that is %j", that);
             for (var i = 0; i < f.length; i++) {
                 if (that.opts) {
                     if (that.opts["maxSize"]) {
@@ -5872,6 +5907,21 @@ require("./Types.js");
             }
             return this;
         },
+        delete: function _delete(msg_from_parent) {
+            while (this.element.lastChild) {
+                this.element.removeChild(this.element.lastChild);
+            }
+            if (this.parent && msg_from_parent === undefined) {
+                this.parent.deleteChild(this);
+                return;
+            } else if (this.element.parentNode) {
+                this.element.parentNode.removeChild(this.element);
+            }
+            if (this.listen) {
+                Apoco.IO.unsubscribe(this);
+            }
+            this.element = null;
+        },
         show: function show() {
             this.hidden = false;
             if (this.root) {
@@ -5979,11 +6029,12 @@ require("./Types.js");
         },
         code: function code(that) {
             that.element = document.createElement("code");
+
             if (that.text === undefined) {
                 that.text = "";
             }
 
-            that.element.textContent = that.text;
+            that.element.innerHTML = that.text;
         },
         paragraph: function paragraph(that) {
             that.element = document.createElement("p");
@@ -6194,9 +6245,11 @@ require("./Window");
     'use strict';
 
     function check(ar) {
+
         if (!Apoco.type["object"].check(ar)) {
-            throw new Error("This is not a window display object " + ar);
+            throw new Error("This is not a window display object " + ar, "Panel.js");
         }
+
         for (var i in ar) {
             var OK = 0;
             var msg = new String();
@@ -6338,7 +6391,6 @@ require("./Window");
                 return null;
             }
             for (var i = 0; i < c.length; i++) {
-                console.log("Panel show " + c[i].id + " hidden " + c[i].hidden);
                 c[i].show(true);
             }
             return p;
@@ -6385,7 +6437,7 @@ require("./Window");
         },
         hide: function hide(k) {
             var p = this.get(k);
-            console.log("hiding panel " + k);
+
             if (!p) {
                 throw new Error("Panel.hide Cannot find panel " + k);
             }
@@ -6404,6 +6456,9 @@ require("./Window");
             var l = [];
             for (var i = 0; i < this._list.length; i++) {
                 l[i] = this._list[i].name;
+            }
+            if (l.length === 0) {
+                return null;
             }
             return l;
         },
@@ -6436,21 +6491,28 @@ require("./Window");
             }
         },
         add: function add(panel) {
+            var w, p;
+
             if (!panel) {
-                throw new Error("Panel.add must have a name or object");
+                throw new Error("Panel.add must have a name or object", "Panel.js");
             }
             if (Apoco.type['string'].check(panel)) {
-                var w = this._UIGet(panel);
-                panel = w;
+                w = this._UIGet(panel);
+                if (w) {
+                    panel = w;
+                } else {
+                    throw new Error("Panel is not an object and not defined in UI.Panels", "Panel.js");
+                }
             }
-
+            if (Apoco.type["object"].check(panel) && !panel.name) {
+                throw new Error("panel must have a name");
+            }
             if (this._inList(panel.name) === null) {
                 check(panel.components);
-                var p = Apoco._panelComponents(panel);
-
+                p = Apoco._panelComponents(panel);
                 this._list.push(p);
             } else {
-                throw new Error("Panel.add " + panel.name + " is already in the display list");
+                throw new Error("Panel.add " + panel.name + " is already in the display list", "Panel.js");
             }
             return p;
         },
@@ -6481,8 +6543,9 @@ require("./Window");
                     delete obj[k];
                 }
                 obj = null;
+                return this._list.length;
             } else {
-                throw new Error("Apoco.Panel delete -" + name + "is not in the list of Panels");
+                throw new Error("Apoco.Panel delete -" + name + " is not in the list of Panels");
             }
         }
     };
@@ -6539,6 +6602,9 @@ require("./Window");
         },
         addChild: function addChild(display_object) {
             var d;
+            if (!display_object) {
+                throw new Error("addChild: missing parameter - display object", "Panel.js");
+            }
             if (this.getChild(display_object.id)) {
                 throw new Error("Apoco.Panel: already have a child with id " + display_object.id);
             }
@@ -6563,19 +6629,20 @@ require("./Window");
         },
         deleteChildren: function deleteChildren(child_array) {
             if (!this.components) {
-                throw new Error("Panel: has no children " + this.name);
+                return null;
             }
 
             if (child_array && Apoco.type["array"].check(child_array)) {
                 for (var i = 0; i < child_array.length; i++) {
                     this.deleteChild(child_array[i]);
                 }
-                return;
+                return this.components.length;
             }
             for (var i = 0; i < this.components.length; i++) {
                 this.components[i].delete("message from parent");
             }
             this.components.length = 0;
+            return 0;
         },
         deleteChild: function deleteChild(obj) {
             var index = -1;
@@ -6611,6 +6678,16 @@ require("./Window");
             if (!this.components) {
                 return null;
             }
+            if (!id) {
+                throw new Error("getChild: needs a parameter, either the display object or it's id");
+            }
+            if (Apoco.type.object.check(id)) {
+                if (id.id) {
+                    id = id.id;
+                } else {
+                    return null;
+                }
+            }
 
             for (var i = 0; i < this.components.length; i++) {
                 if (this.components[i].id === id) {
@@ -6620,10 +6697,14 @@ require("./Window");
             return null;
         },
         findChild: function findChild(child) {
+            var found = null;
+
             if (!this.components) {
                 return null;
             }
-            var found = null;
+            if (!child) {
+                throw new Error("findChild: parameter needs to be an object with at least one key value pair - key:id or element:HTMLElement or name:someName ");
+            }
             for (var i = 0; i < this.components.length; i++) {
                 found = null;
                 for (var k in child) {
@@ -7776,7 +7857,11 @@ String.prototype.trim = String.prototype.trim || function trim() {
                     for (var i = 0; i < sort_order.length; i++) {
                         field = sort_order[i];
                         item = data[field];
-                        curr = aa[field].value;
+                        if (aa[field].hasOwnProperty("value")) {
+                            curr = aa[field].value;
+                        } else {
+                            curr = aa[field];
+                        }
 
                         if (curr == item) {
                             continue;
@@ -7943,6 +8028,18 @@ String.prototype.trim = String.prototype.trim || function trim() {
             var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
             var parts = d.split("-");
+
+            if (parts.length !== 3) {
+                parts = [];
+                d = d.trim();
+                if (d.length !== 8) {
+                    throw new Error("date is in wrong format - YYYY-MM-DD or YYYYMMDD", "Utils.js");
+                }
+                parts[0] = d.substr(0, 4);
+                parts[1] = d.substr(4, 2);
+                parts[2] = d.substr(6);
+            }
+
             var date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             var month = date.getMonth();
             var day = date.getDay();
@@ -8074,6 +8171,11 @@ String.prototype.trim = String.prototype.trim || function trim() {
                 p = window.location.pathname + "?" + name;
 
                 history.pushState(c_obj, name, p);
+            },
+            fragString: function fragString() {
+                var name = null,
+                    u = window.location.href;
+                var p = u.split("?");
             },
             queryString: function queryString() {
                 var name = null,
@@ -10645,7 +10747,7 @@ module.exports = utils;
  * @copyright Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors (Conversion to ES6 API by Jake Archibald)
  * @license   Licensed under MIT license
  *            See https://raw.githubusercontent.com/stefanpenner/es6-promise/master/LICENSE
- * @version   v4.2.5+7f2b526d
+ * @version   v4.2.6+9869a4bc
  */
 
 (function (global, factory) {
