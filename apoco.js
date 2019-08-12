@@ -439,7 +439,7 @@ require("./Fields.js");
                     parent_element.appendChild(p);
                 } else if (n.display) {
                     parent_element.appendChild(el);
-                    n.show();
+                    n.show(true);
                 } else {
                     parent_element.appendChild(n.element);
                 }
@@ -2174,12 +2174,10 @@ require("./DisplayBase");
             console.log("isVisible is here");
             if (that.DOM.contains(that.element)) {
                 if (document.hidden) {
-                    console.log("+++++++++++++++=hidden");
                     if (that.interval) {
                         that.stop();
                     }
                 } else {
-                    console.log("++++++++++++++++visible");
                     if (that.autoplay) {
                         if (that.controls) {
                             that.element.querySelector(".play").click();
@@ -2280,7 +2278,7 @@ require("./DisplayBase");
                 y = this.element.offsetTop;
             e = this.element;
 
-            while (e = e.offsetParent) {
+            while (e == e.offsetParent) {
                 y += e.offsetTop;
             }
             return y;
@@ -4453,10 +4451,10 @@ var Promise = require('es6-promise').Promise;
         this.element.classList.add(d.field);
         if (this.editable !== false) {
             if (!window.FileReader) {
-                Apoco.popup.dialog("Sorry No FileReader", "Your browser does not support the image reader");
+                Apoco.popup.dialog("Sorry No FileReader", "Your browser does not support the reader");
                 throw new Error("No FileReader");
             }
-            console.log("making a container");
+
             this.container = document.createElement("div");
             this.container.classList.add("file_container");
             this.element.appendChild(this.container);
@@ -4571,7 +4569,6 @@ var Promise = require('es6-promise').Promise;
             var that = this,
                 rc;
             that.input.addEventListener("change", function (e) {
-                console.log("FileReader got change event ");
                 rc = that._getFiles(e, that);
 
                 that._processFileIn();
@@ -4581,11 +4578,10 @@ var Promise = require('es6-promise').Promise;
             var that = this;
             Promise.all(that._promises).then(function (files) {
                 var pb = that.progressBar;
-                console.log("errors are %j ", that._errors);
+
                 that.showError();
 
                 for (var i = 0; i < files.length; i++) {
-                    console.log("adding value " + files[i].name);
                     that.addValue(files[i]);
 
                     if (pb) {
@@ -4659,7 +4655,6 @@ var Promise = require('es6-promise').Promise;
             }
             for (var i = 0; i < this.value.length; i++) {
                 if (this.value[i].name === v.name) {
-                    console.log("already have this value");
                     return false;
                 }
             }
@@ -4687,7 +4682,6 @@ var Promise = require('es6-promise').Promise;
             if (this._files) {
                 this._files.length = 0;
             }
-            console.log("clearFilenames file s");
         },
         findFile: function findFile(name) {
             var that = this;
@@ -4730,7 +4724,6 @@ var Promise = require('es6-promise').Promise;
 
 
             for (var i = 0; i < this.value.length; i++) {
-                console.log("FireReader removing embedded stuff");
                 this.element.removeChild(this.value[i].element);
             }
             this.reset();
@@ -4740,14 +4733,13 @@ var Promise = require('es6-promise').Promise;
             var that = this,
                 found = null;
             for (var i = 0; i < that._promises.length; i++) {
-                console.log("looking at promise " + i);
                 that._promises[i].then(function (file) {
                     if (file.name === name) {
                         found = i;
                     }
                 });
             }
-            console.log("FileReader: got promise to delete " + found);
+
 
             for (var i = 0; i < that.value.length; i++) {
                 if (that.value[i].name === name) {
@@ -4755,9 +4747,7 @@ var Promise = require('es6-promise').Promise;
                 }
             }
             if (i < that.value.length) {
-                console.log(Object.keys(that.value[i]));
                 for (var k in that.value[i]) {
-                    console.log("k is " + k);
                     if (k === "element") {
                         if (that.value[i].element.parentNode) {
                             that.value[i].element.parentNode.removeChild(that.value[i].element);
@@ -4850,15 +4840,12 @@ var Promise = require('es6-promise').Promise;
             v.element.appendChild(v.object);
             that.element.appendChild(v.element);
 
-            console.log("FileReader: promises length is " + that._promises.length);
-            console.log("Filereader has " + that.value.length);
             return v;
         },
         reset: function reset() {
             var that = this;
-            console.log("FileReader: reset is here");
+
             for (var i = 0; i < that.value.length; i++) {
-                console.log("deleting file " + that.value[i].name);
                 that.deleteValue(that.value[i].name);
             }
             that.clearFileNames();
@@ -4879,7 +4866,6 @@ var Promise = require('es6-promise').Promise;
                 pb,
                 that = this;
 
-            console.log("_doProgress got event %j ", evt);
             if (!that["progressBar"]) {
                 throw new Error("Cannot find progressBar");
             } else {
@@ -4919,12 +4905,9 @@ var Promise = require('es6-promise').Promise;
             }
 
             if (that.opts.mimeType) {
-                console.log("checking mimetype");
                 for (var i = 0; i < f.length; i++) {
-                    console.log("evt target MIMEType is " + f[i].type);
                     for (var j = 0; j < that.opts.mimeType.length; j++) {
                         if (f[i].type.match(that.opts.mimeType[j])) {
-                            console.log("Got matching file types");
                             files.push(f[i]);
                             break;
                         }
@@ -4938,7 +4921,6 @@ var Promise = require('es6-promise').Promise;
                 return 0;
             }
 
-            console.log("_getFileSelect has files %j ", files);
             rc = Apoco.IO.getFiles(files, that);
             return rc;
         }
@@ -5886,6 +5868,12 @@ require("./Types.js");
         if (this.name) {
             this.element.setAttribute("name", this.name);
         }
+        if (this.props) {
+
+            for (var k in this.props) {
+                this.element[k] = this.props[k];
+            }
+        }
         if (element) {
             element.appendChild(this.element);
         }
@@ -5965,6 +5953,7 @@ require("./Types.js");
                         that.element.textContent = that.text;
                     }
                 }
+
                 if (that.attr) {
                     for (var i = 0; i < that.attr.length; i++) {
                         for (var k in that.attr[i]) {
